@@ -7,7 +7,7 @@
    - Images (thumbnails)                 → Stale-While-Revalidate
    ============================================================ */
 
-const CACHE_VERSION = 'v1.0.5';
+const CACHE_VERSION = 'v1.0.6';
 const STATIC_CACHE  = `playidtv-static-${CACHE_VERSION}`;
 const DATA_CACHE    = `playidtv-data-${CACHE_VERSION}`;
 const IMAGE_CACHE   = `playidtv-images-${CACHE_VERSION}`;
