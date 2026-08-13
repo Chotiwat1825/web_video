@@ -584,6 +584,10 @@ img { display: block; max-width: 100%; }
   align-items: baseline;
   gap: 12px;
   margin-bottom: 20px;
+  scroll-margin-top: 90px;
+}
+.section-header:focus {
+  outline: none;
 }
 .section-title {
   font-size: 22px;
@@ -2286,5 +2290,167 @@ body {
   .tab-bar-icon { width: 20px; height: 20px; }
   .tab-bar-label { font-size: 9px; }
   .tab-bar-icon-wrap { width: 40px; height: 28px; }
+}
+
+/* ===================================================
+   PlayIDTV — Favorites & Resume Playback Additions
+   =================================================== */
+
+/* Card Level Favorite Button */
+.card-fav-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(10, 10, 15, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+}
+
+.card-fav-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* Show favorite button by default on mobile since there is no hover */
+@media (max-width: 900px) {
+  .card-fav-btn {
+    opacity: 1;
+  }
+}
+
+.video-card:hover .card-fav-btn {
+  opacity: 1;
+}
+
+.card-fav-btn:hover {
+  background: rgba(10, 10, 15, 0.85);
+  transform: scale(1.12);
+}
+
+.card-fav-btn.active {
+  color: var(--accent-primary);
+  background: rgba(10, 10, 15, 0.75);
+  border-color: rgba(229, 9, 20, 0.3);
+  opacity: 1;
+}
+
+/* Modal Favorite Highlighted Active State */
+#btn-modal-fav.active {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  background: rgba(229, 9, 20, 0.15);
+}
+
+#btn-modal-fav.active svg {
+  color: var(--accent-primary);
+  fill: var(--accent-primary);
+}
+
+/* Player Resume Playback Prompt Overlay */
+.player-resume-prompt {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -40%) scale(0.95);
+  background: rgba(15, 15, 25, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 20px 24px;
+  border-radius: var(--radius-md);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 320px;
+  width: calc(100% - 40px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player-resume-prompt.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.player-resume-prompt .resume-text {
+  font-family: inherit;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.player-resume-prompt .resume-time {
+  color: var(--accent-secondary);
+  font-weight: 700;
+  background: rgba(255, 77, 90, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  margin-left: 2px;
+}
+
+.player-resume-prompt .resume-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.player-resume-prompt .btn-resume-yes,
+.player-resume-prompt .btn-resume-no {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.player-resume-prompt .btn-resume-yes {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
+}
+
+.player-resume-prompt .btn-resume-yes:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 16px rgba(229, 9, 20, 0.45);
+}
+
+.player-resume-prompt .btn-resume-no {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.player-resume-prompt .btn-resume-no:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text-primary);
+}
+
+.player-resume-prompt .btn-resume-yes:active,
+.player-resume-prompt .btn-resume-no:active {
+  transform: scale(0.97);
 }
 

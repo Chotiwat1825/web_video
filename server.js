@@ -91,8 +91,18 @@ function getDynamicIndex() {
     }
   }
   
-  // Sort descending by health score, then alphabetically by name
+  // Sort descending by: Heedeng & Lovehee first, then health score, then alphabetically by name
   return index.sort((a, b) => {
+    const isHeedengA = a.file && a.file.toLowerCase().includes('heedeng');
+    const isHeedengB = b.file && b.file.toLowerCase().includes('heedeng');
+    const isLoveheeA = a.file && a.file.toLowerCase().includes('lovehee');
+    const isLoveheeB = b.file && b.file.toLowerCase().includes('lovehee');
+
+    if (isHeedengA && !isHeedengB) return -1;
+    if (isHeedengB && !isHeedengA) return 1;
+    if (isLoveheeA && !isLoveheeB) return -1;
+    if (isLoveheeB && !isLoveheeA) return 1;
+
     const healthA = a.health !== undefined ? a.health : 100;
     const healthB = b.health !== undefined ? b.health : 100;
     if (healthB !== healthA) {

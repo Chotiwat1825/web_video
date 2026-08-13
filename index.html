@@ -81,7 +81,7 @@
     </div>
 
     <!-- Video grid -->
-    <div class="section-header">
+    <div class="section-header" tabindex="-1">
       <h2 class="section-title" id="section-title">รายการทั้งหมด</h2>
       <span class="video-count" id="video-count"></span>
     </div>
@@ -320,6 +320,17 @@
 
         <!-- Center ripple feedback -->
         <div class="player-ripple" id="player-ripple"></div>
+
+        <!-- Resume Playback Prompt Overlay -->
+        <div class="player-resume-prompt" id="player-resume-prompt">
+          <div class="resume-text">
+            ต้องการเล่นต่อจากจุดเดิมที่ชมค้างไว้ (<span class="resume-time" id="resume-time-str">0:00</span>) หรือไม่?
+          </div>
+          <div class="resume-actions">
+            <button class="btn-resume-yes" id="btn-resume-yes">เล่นต่อ</button>
+            <button class="btn-resume-no" id="btn-resume-no">เริ่มใหม่</button>
+          </div>
+        </div>
       </div>
 
       <!-- Video Info -->
@@ -334,6 +345,10 @@
           <span id="modal-meta-code"></span>
         </div>
         <div class="modal-actions">
+          <button class="btn-modal-action" onclick="closeModal()">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <span>ย้อนกลับ</span>
+          </button>
           <button class="btn-modal-action" id="btn-prev" onclick="navigateVideo(-1)">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             <span>ก่อนหน้า</span>
@@ -341,6 +356,10 @@
           <button class="btn-modal-action" id="btn-next" onclick="navigateVideo(1)">
             <span>ถัดไป</span>
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </button>
+          <button class="btn-modal-action" id="btn-modal-fav" onclick="toggleCurrentFavorite()">
+            <svg class="svg-icon" id="icon-modal-fav" viewBox="0 0 24 24"></svg>
+            <span id="label-modal-fav">รายการโปรด</span>
           </button>
           <button class="btn-modal-action" onclick="copyVideoUrl()">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
@@ -408,6 +427,17 @@
         <span class="tab-bar-badge" id="tab-badge-categories" style="display:none"></span>
       </div>
       <span class="tab-bar-label">หมวดหมู่</span>
+    </button>
+
+    <!-- Favorites Tab -->
+    <button class="tab-bar-item" id="tab-favorites" role="tab" aria-selected="false" aria-label="รายการโปรด" onclick="switchTab('favorites')">
+      <div class="tab-bar-icon-wrap">
+        <svg class="tab-bar-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+        <span class="tab-bar-badge" id="tab-badge-favorites" style="display:none"></span>
+      </div>
+      <span class="tab-bar-label">รายการโปรด</span>
     </button>
 
     <!-- Search Tab -->

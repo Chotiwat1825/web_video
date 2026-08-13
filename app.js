@@ -20,6 +20,8 @@ let state = {
   hlsInstance:    null,   // HLS.js player instance
   lastScrollY:    0,      // last scroll position before modal opens
   modalHistoryActive: false, // tracks if a modal/overlay history state has been pushed
+  showFavorites:  false,   // whether showing Favorites view
+  favoritesChanged: false, // whether favorites list changed during viewing favorites (trigger grid reload on close modal)
 }
 
 // ── Browser History / Modal Sync ──────────────────────
@@ -106,6 +108,9 @@ const SVG_ICONS = {
   cancel: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`,
   warning: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`,
   check_circle: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`,
+  favorite: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`,
+  favorite_border: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg>`,
+  history: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>`,
 };
 
 function getIcon(name) {
@@ -537,6 +542,13 @@ function onTimeUpdate() {
   // Update time text
   const timeEl = $('player-time');
   if (timeEl) timeEl.textContent = formatTime(v.currentTime) + ' / ' + formatTime(v.duration);
+
+  // Throttled watch progress save to localStorage (every 4 seconds)
+  const now = Date.now();
+  if (now - lastHistorySaveTime > 4000) {
+    lastHistorySaveTime = now;
+    saveVideoProgress(state.currentVideo, v.currentTime, v.duration);
+  }
 }
 
 function onBufferUpdate() {
@@ -895,8 +907,18 @@ function renderPlaylists(searchQuery = '') {
     list = list.filter(p => p.name.toLowerCase().includes(searchQuery));
   }
 
-  // Ensure they are sorted by watchable ratio (health) descending
+  // Ensure they are sorted: Heedeng & Lovehee first, then by watchable ratio (health) descending
   list.sort((a, b) => {
+    const isHeedengA = a.file && a.file.toLowerCase().includes('heedeng');
+    const isHeedengB = b.file && b.file.toLowerCase().includes('heedeng');
+    const isLoveheeA = a.file && a.file.toLowerCase().includes('lovehee');
+    const isLoveheeB = b.file && b.file.toLowerCase().includes('lovehee');
+
+    if (isHeedengA && !isHeedengB) return -1;
+    if (isHeedengB && !isHeedengA) return 1;
+    if (isLoveheeA && !isLoveheeB) return -1;
+    if (isLoveheeB && !isLoveheeA) return 1;
+
     const healthA = a.health !== undefined ? a.health : 100;
     const healthB = b.health !== undefined ? b.health : 100;
     if (healthB !== healthA) {
@@ -1091,10 +1113,21 @@ function renderHero(videos) {
 function renderNavTabs(json) {
   const plName = state.playlists[state.playlistIdx].name;
   DOM.navTabs.innerHTML = `
-    <button class="nav-tab active" onclick="setActiveGroup('all')">
+    <button class="nav-tab active" id="nav-tab-main" onclick="switchDesktopTab('home')">
       ${getIcon('movie')} <span>${escHtml(plName)}</span>
     </button>
+    <button class="nav-tab" id="nav-tab-fav" onclick="switchDesktopTab('favorites')">
+      ${getIcon('favorite')} <span>รายการโปรด</span>
+    </button>
   `;
+}
+
+function switchDesktopTab(tabId) {
+  if (tabId === 'favorites') {
+    switchTab('favorites');
+  } else {
+    switchTab('home');
+  }
 }
 
 // ── Group Filters ──────────────────────────────────────
@@ -1132,11 +1165,15 @@ function setActiveGroup(group) {
 
 // ── Apply Query and Filters ───────────────────────────
 function applyFilter() {
-  let videos = [...state.allVideos];
-
-  // Group filter
-  if (state.activeGroup !== 'all') {
-    videos = videos.filter((v) => v.group === state.activeGroup);
+  let videos;
+  if (state.showFavorites) {
+    videos = getFavorites();
+  } else {
+    videos = [...state.allVideos];
+    // Group filter
+    if (state.activeGroup !== 'all') {
+      videos = videos.filter((v) => v.group === state.activeGroup);
+    }
   }
 
   // Multi-token fuzzy search: every space-separated token must match
@@ -1210,6 +1247,7 @@ function renderVideos() {
 function createVideoCard(video, idx) {
   const card = document.createElement('div');
   card.className = 'video-card';
+  card.setAttribute('data-url', video.url);
   card.style.animationDelay = `${(idx % state.pageSize) * 20}ms`;
 
   const thumbSrc = video.image || generatePlaceholder(video.name);
@@ -1218,6 +1256,7 @@ function createVideoCard(video, idx) {
   const durationText = video.duration || extension;
 
   const q = state.searchQuery || '';
+  const isFav = isFavorite(video);
   card.innerHTML = `
     <div class="card-thumb">
       <img
@@ -1226,6 +1265,9 @@ function createVideoCard(video, idx) {
         loading="lazy"
         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22200%22><rect fill=%22%231a1a28%22 width=%22320%22 height=%22200%22/><path fill=%22%23606080%22 transform=%22translate(136, 76) scale(2)%22 d=%22M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z%22/></svg>'"
       />
+      <button class="card-fav-btn${isFav ? ' active' : ''}" aria-label="รายการโปรด" title="บันทึกรายการโปรด">
+        ${getIcon(isFav ? 'favorite' : 'favorite_border')}
+      </button>
       <div class="card-play-overlay">
         <div class="card-play-btn">${getIcon('play')}</div>
       </div>
@@ -1241,6 +1283,14 @@ function createVideoCard(video, idx) {
       </div>
     </div>
   `;
+
+  const favBtn = card.querySelector('.card-fav-btn');
+  if (favBtn) {
+    favBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFavorite(video);
+    });
+  }
 
   card.addEventListener('click', () => openModal(video, idx));
   return card;
@@ -1302,10 +1352,11 @@ function renderPagination(totalPages) {
 function changePage(p) {
   state.page = p;
   renderVideos();
-  // Scroll to the top of the video section smoothly
+  // Scroll to the top of the video section smoothly and focus it
   const sectionHeader = document.querySelector('.section-header');
   if (sectionHeader) {
     sectionHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    sectionHeader.focus({ preventScroll: true });
   }
 }
 
@@ -1326,6 +1377,7 @@ function renderSkeletons(count) {
 
 // ── Video Player Modal ─────────────────────────────────
 let _playerControlsInited = false;
+let lastHistorySaveTime = 0;
 function openModal(video, idx) {
   state.currentVideo = video;
   state.currentIndex = idx >= 0 ? idx : state.filteredVideos.indexOf(video);
@@ -1338,8 +1390,57 @@ function openModal(video, idx) {
   DOM.videoPlayer.poster = video.image || '';
   DOM.playerLoading.classList.add('show');
   
-  // Stream Playback Logic (.m3u8 vs .mp4)
-  playStream(video.url);
+  // Initialize modal favorite UI state
+  updateModalFavoriteUI(video);
+
+  // Check if we have watch progress history
+  const progress = getProgress(video.url);
+  const time = progress ? progress.time : 0;
+  const duration = progress ? progress.duration : 0;
+  
+  const resumePrompt = $('player-resume-prompt');
+  if (resumePrompt) {
+    resumePrompt.classList.remove('show');
+  }
+
+  // Support resuming only for HTML5 native/HLS player, not for embeds
+  if (!isEmbedUrl(video.url) && time > 10 && duration > 0 && time < duration - 15) {
+    DOM.playerLoading.classList.remove('show');
+    const timeStrSpan = $('resume-time-str');
+    if (resumePrompt && timeStrSpan) {
+      timeStrSpan.textContent = formatTime(time);
+      resumePrompt.classList.add('show');
+      
+      const yesBtn = $('btn-resume-yes');
+      const noBtn = $('btn-resume-no');
+      
+      const cleanUpHandlers = () => {
+        const yesNode = $('btn-resume-yes');
+        const noNode = $('btn-resume-no');
+        if (yesNode) yesNode.replaceWith(yesNode.cloneNode(true));
+        if (noNode) noNode.replaceWith(noNode.cloneNode(true));
+      };
+      
+      $('btn-resume-yes').addEventListener('click', () => {
+        const p = $('player-resume-prompt');
+        if (p) p.classList.remove('show');
+        DOM.playerLoading.classList.add('show');
+        playStream(video.url, time);
+        cleanUpHandlers();
+      });
+      
+      $('btn-resume-no').addEventListener('click', () => {
+        const p = $('player-resume-prompt');
+        if (p) p.classList.remove('show');
+        DOM.playerLoading.classList.add('show');
+        clearVideoProgress(video.url);
+        playStream(video.url, 0);
+        cleanUpHandlers();
+      });
+    }
+  } else {
+    playStream(video.url, 0);
+  }
 
   // Load related channels
   renderRelated(video);
@@ -1355,6 +1456,12 @@ function openModal(video, idx) {
   document.body.classList.add('modal-open');
   document.body.style.overflow = 'hidden';
 
+  // Reset modal scroll position to top
+  const modalContainer = $('modal-container');
+  if (modalContainer) {
+    modalContainer.scrollTop = 0;
+  }
+
   // Initialize player controls only once
   if (!_playerControlsInited) {
     _playerControlsInited = true;
@@ -1368,7 +1475,7 @@ function isEmbedUrl(url) {
   return url.includes('lumierecore.com') || url.includes('xembed.club') || url.includes('/embed/') || url.includes('embed=true');
 }
 
-function playStream(url) {
+function playStream(url, startTime = 0) {
   // Clear any existing HLS instances
   if (state.hlsInstance) {
     state.hlsInstance.destroy();
@@ -1407,6 +1514,9 @@ function playStream(url) {
       state.hlsInstance.loadSource(playUrl);
       state.hlsInstance.attachMedia(DOM.videoPlayer);
       state.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (startTime > 0) {
+          DOM.videoPlayer.currentTime = startTime;
+        }
         DOM.videoPlayer.play().catch(() => {});
       });
       let networkErrorCount = 0;
@@ -1437,6 +1547,13 @@ function playStream(url) {
       // Native Apple HLS streaming (Safari / iOS)
       DOM.videoPlayer.src = playUrl;
       DOM.videoPlayer.load();
+      if (startTime > 0) {
+        const onMetadata = () => {
+          DOM.videoPlayer.currentTime = startTime;
+          DOM.videoPlayer.removeEventListener('loadedmetadata', onMetadata);
+        };
+        DOM.videoPlayer.addEventListener('loadedmetadata', onMetadata);
+      }
       DOM.videoPlayer.play().catch(() => {});
     } else {
       DOM.playerLoading.classList.remove('show');
@@ -1446,14 +1563,40 @@ function playStream(url) {
     // Normal MP4 file playback
     DOM.videoPlayer.src = playUrl;
     DOM.videoPlayer.load();
+    if (startTime > 0) {
+      const onMetadata = () => {
+        DOM.videoPlayer.currentTime = startTime;
+        DOM.videoPlayer.removeEventListener('loadedmetadata', onMetadata);
+      };
+      DOM.videoPlayer.addEventListener('loadedmetadata', onMetadata);
+    }
     DOM.videoPlayer.play().catch(() => {});
   }
 }
 
 function closeModal(e) {
   if (e && e.target !== DOM.modalOverlay) return;
+
+  // Save watch progress to localStorage before closing
+  const v = DOM.videoPlayer;
+  if (state.currentVideo && v.currentTime && v.duration) {
+    saveVideoProgress(state.currentVideo, v.currentTime, v.duration);
+  }
+
+  // Hide resume prompt overlay if open
+  const resumePrompt = $('player-resume-prompt');
+  if (resumePrompt) {
+    resumePrompt.classList.remove('show');
+  }
+
   DOM.modalOverlay.classList.remove('open');
   document.body.classList.remove('modal-open');
+  
+  // Reset modal scroll position to top
+  const modalContainer = $('modal-container');
+  if (modalContainer) {
+    modalContainer.scrollTop = 0;
+  }
   
   if (state.hlsInstance) {
     state.hlsInstance.destroy();
@@ -1489,6 +1632,13 @@ function closeModal(e) {
     if (iconLock)   iconLock.style.display   = 'none';
     if (iconUnlock) iconUnlock.style.display = '';
   }
+
+  // If favorites changed while browsing favorites, refresh grid
+  if (state.showFavorites && state.favoritesChanged) {
+    applyFilter();
+    state.favoritesChanged = false;
+  }
+
   syncModalHistory();
 }
 
@@ -1557,6 +1707,187 @@ function renderRelated(current) {
     </div>
   `).join('');
 }
+
+// ── Favorites Core Logic ───────────────────────────────
+function getFavorites() {
+  try {
+    const raw = localStorage.getItem('playidtv_favorites');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error('Error reading favorites', e);
+    return [];
+  }
+}
+
+function saveFavorites(list) {
+  try {
+    localStorage.setItem('playidtv_favorites', JSON.stringify(list));
+  } catch (e) {
+    console.error('Error saving favorites', e);
+  }
+}
+
+function isFavorite(video) {
+  if (!video || !video.url) return false;
+  const favs = getFavorites();
+  return favs.some(v => v.url === video.url);
+}
+
+function toggleFavorite(video) {
+  if (!video || !video.url) return;
+  let favs = getFavorites();
+  const index = favs.findIndex(v => v.url === video.url);
+
+  if (index >= 0) {
+    favs.splice(index, 1);
+    showToast(getIcon('cancel') + ' <span>ลบออกจากรายการโปรดแล้ว</span>');
+  } else {
+    favs.push({
+      name: video.name,
+      image: video.image,
+      url: video.url,
+      code: video.code,
+      group: video.group,
+      duration: video.duration
+    });
+    showToast(getIcon('check_circle') + ' <span>เพิ่มในรายการโปรดแล้ว</span>');
+  }
+  saveFavorites(favs);
+  
+  if (state.showFavorites) {
+    state.favoritesChanged = true;
+  }
+
+  updateCardFavoriteState(video.url, index < 0);
+  updateModalFavoriteUI(video);
+}
+
+function updateCardFavoriteState(url, isFav) {
+  const cards = document.querySelectorAll('.video-card');
+  cards.forEach(card => {
+    if (card.getAttribute('data-url') === url) {
+      const btn = card.querySelector('.card-fav-btn');
+      if (btn) {
+        btn.classList.toggle('active', isFav);
+        btn.innerHTML = getIcon(isFav ? 'favorite' : 'favorite_border');
+      }
+    }
+  });
+}
+
+function updateModalFavoriteUI(video) {
+  if (!state.currentVideo || state.currentVideo.url !== video.url) return;
+  const favBtn = $('btn-modal-fav');
+  if (favBtn) {
+    const isFav = isFavorite(video);
+    favBtn.classList.toggle('active', isFav);
+    
+    const favIcon = $('icon-modal-fav');
+    if (favIcon) {
+      favIcon.innerHTML = isFav 
+        ? `<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>`
+        : `<path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/>`;
+    }
+    
+    const favLabel = $('label-modal-fav');
+    if (favLabel) {
+      favLabel.textContent = isFav ? 'เลิกบันทึก' : 'รายการโปรด';
+    }
+  }
+}
+
+function toggleCurrentFavorite() {
+  if (state.currentVideo) {
+    toggleFavorite(state.currentVideo);
+  }
+}
+
+// ── Watch History Core Logic ───────────────────────────
+function getWatchHistory() {
+  try {
+    const raw = localStorage.getItem('playidtv_history');
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.error('Error reading history', e);
+    return {};
+  }
+}
+
+function saveWatchHistory(history) {
+  try {
+    localStorage.setItem('playidtv_history', JSON.stringify(history));
+  } catch (e) {
+    console.error('Error saving history', e);
+  }
+}
+
+function getProgress(url) {
+  const history = getWatchHistory();
+  return history[url] || null;
+}
+
+function saveVideoProgress(video, time, duration) {
+  if (!video || !video.url || !duration || isNaN(time) || isNaN(duration)) return;
+  if (isEmbedUrl(video.url)) return;
+
+  const history = getWatchHistory();
+
+  if (time > duration - 15 || time / duration > 0.95) {
+    delete history[video.url];
+  } else if (time > 10) {
+    history[video.url] = {
+      video: {
+        name: video.name,
+        image: video.image,
+        url: video.url,
+        code: video.code,
+        group: video.group,
+        duration: video.duration
+      },
+      time: time,
+      duration: duration,
+      updatedAt: Date.now()
+    };
+  } else {
+    return;
+  }
+
+  const entries = Object.entries(history);
+  if (entries.length > 50) {
+    entries.sort((a, b) => b[1].updatedAt - a[1].updatedAt);
+    const trimmedHistory = {};
+    entries.slice(0, 50).forEach(([url, item]) => {
+      trimmedHistory[url] = item;
+    });
+    saveWatchHistory(trimmedHistory);
+  } else {
+    saveWatchHistory(history);
+  }
+}
+
+function clearVideoProgress(url) {
+  const history = getWatchHistory();
+  if (history[url]) {
+    delete history[url];
+    saveWatchHistory(history);
+  }
+}
+
+function formatTime(seconds) {
+  if (isNaN(seconds)) return '00:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  
+  const mStr = String(m).padStart(2, '0');
+  const sStr = String(s).padStart(2, '0');
+  
+  if (h > 0) {
+    return `${h}:${mStr}:${sStr}`;
+  }
+  return `${mStr}:${sStr}`;
+}
+
 
 // ── Actions ────────────────────────────────────────────
 function copyVideoUrl() {
@@ -1882,8 +2213,18 @@ function switchTab(tabId) {
   switch (tabId) {
 
     case 'home':
+      state.showFavorites = false;
       closeTabOverlays();
       setTabActive('home');
+      // Restore desktop navigation active states
+      const navMainHome = $('nav-tab-main');
+      const navFavHome = $('nav-tab-fav');
+      if (navMainHome) navMainHome.classList.add('active');
+      if (navFavHome) navFavHome.classList.remove('active');
+      // Restore group filters
+      if (state.data && state.data.groups) {
+        renderGroupFilter(state.data.groups);
+      }
       // Reset search and scroll to top
       state.searchQuery = '';
       if (DOM.searchInput) DOM.searchInput.value = '';
@@ -1899,6 +2240,15 @@ function switchTab(tabId) {
         // Toggle off
         closeTabOverlays();
         setTabActive('home');
+        state.showFavorites = false;
+        const navMainCat = $('nav-tab-main');
+        const navFavCat = $('nav-tab-fav');
+        if (navMainCat) navMainCat.classList.add('active');
+        if (navFavCat) navFavCat.classList.remove('active');
+        if (state.data && state.data.groups) {
+          renderGroupFilter(state.data.groups);
+        }
+        applyFilter();
       } else {
         closeTabOverlays();
         setTabActive('categories');
@@ -1913,6 +2263,15 @@ function switchTab(tabId) {
         // Toggle off
         closeTabOverlays();
         setTabActive('home');
+        state.showFavorites = false;
+        const navMainSrc = $('nav-tab-main');
+        const navFavSrc = $('nav-tab-fav');
+        if (navMainSrc) navMainSrc.classList.add('active');
+        if (navFavSrc) navFavSrc.classList.remove('active');
+        if (state.data && state.data.groups) {
+          renderGroupFilter(state.data.groups);
+        }
+        applyFilter();
       } else {
         closeTabOverlays();
         setTabActive('search');
@@ -1925,9 +2284,32 @@ function switchTab(tabId) {
       }
       break;
 
+    case 'favorites':
+      closeTabOverlays();
+      setTabActive('favorites');
+      state.showFavorites = true;
+      
+      // Render single disabled favorite chip in filters scroll bar
+      DOM.filterScroll.innerHTML = `
+        <button class="filter-chip active" id="chip-fav-title" style="pointer-events: none;">
+          ${getIcon('favorite')} <span>รายการโปรดทั้งหมด</span>
+        </button>
+      `;
+      
+      // Update desktop navigation active states
+      const navMainFav = $('nav-tab-main');
+      const navFavFav = $('nav-tab-fav');
+      if (navFavFav) navFavFav.classList.add('active');
+      if (navMainFav) navMainFav.classList.remove('active');
+      
+      applyFilter();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      break;
+
     case 'sources':
       closeTabOverlays();
       setTabActive('home'); // source modal is separate, reset tab
+      state.showFavorites = false;
       openSourceModal();
       break;
 

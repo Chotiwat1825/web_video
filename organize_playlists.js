@@ -67,6 +67,21 @@ function run() {
     }
   });
 
+  // Sort descending by: Heedeng & Lovehee first, then alphabetically by name
+  playlists.sort((a, b) => {
+    const isHeedengA = a.file && a.file.toLowerCase().includes('heedeng');
+    const isHeedengB = b.file && b.file.toLowerCase().includes('heedeng');
+    const isLoveheeA = a.file && a.file.toLowerCase().includes('lovehee');
+    const isLoveheeB = b.file && b.file.toLowerCase().includes('lovehee');
+
+    if (isHeedengA && !isHeedengB) return -1;
+    if (isHeedengB && !isHeedengA) return 1;
+    if (isLoveheeA && !isLoveheeB) return -1;
+    if (isLoveheeB && !isLoveheeA) return 1;
+
+    return a.name.localeCompare(b.name, 'th');
+  });
+
   // Write index file
   const indexFilePath = path.join(ROOT_DIR, 'playlists_index.json');
   fs.writeFileSync(indexFilePath, JSON.stringify(playlists, null, 2), 'utf8');

@@ -4,7 +4,8 @@
   "description": "CORS Proxy and playlist manager for web video streaming",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "update": "node update_all.js"
   },
   "dependencies": {},
   "engines": {

@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 const PLAYLISTS_DIR = path.join(__dirname, 'playlists');
@@ -113,6 +113,14 @@ function getBeautifulName(parsedName) {
     "เรท อาร์": {
       fileName: "ตู้เรทอาร์_RATE_R.json",
       title: "ตู้เรทอาร์ (Rate R)"
+    },
+    "Heedeng - คลิปหลุด OnlyFans": {
+      fileName: "Heedeng.json",
+      title: "Heedeng - คลิปหลุด OnlyFans"
+    },
+    "Lovehee - คลิปหลุด รักหี": {
+      fileName: "Lovehee.json",
+      title: "Lovehee - คลิปหลุด รักหี"
     }
   };
 
@@ -178,7 +186,8 @@ function parseM3U(text) {
       name: s.name,
       image: s.image,
       url: s.url,
-      code: s.code
+      code: s.code,
+      duration: s.duration || ''
     });
   });
 
@@ -196,6 +205,7 @@ function regexFallbackJSON(text) {
     const imageMatch = block.match(/(?:"image"|image)\s*:\s*["']([^"']+)["']/);
     const urlMatch = block.match(/(?:"url"|url)\s*:\s*["']([^"']+)["']/);
     const groupMatch = block.match(/(?:"group"|group)\s*:\s*["']([^"']+)["']/);
+    const durationMatch = block.match(/(?:"duration"|duration)\s*:\s*["']([^"']+)["']/);
 
     if (nameMatch && urlMatch) {
       const urlStr = urlMatch[1];
@@ -205,7 +215,8 @@ function regexFallbackJSON(text) {
           image: imageMatch ? imageMatch[1] : '',
           url: urlStr,
           group: groupMatch ? groupMatch[1] : 'ทั่วไป',
-          code: extractCode(nameMatch[1])
+          code: extractCode(nameMatch[1]),
+          duration: durationMatch ? durationMatch[1] : ''
         });
       }
     }
@@ -220,7 +231,8 @@ function regexFallbackJSON(text) {
       name: s.name,
       image: s.image,
       url: s.url,
-      code: s.code
+      code: s.code,
+      duration: s.duration || ''
     });
   });
 
@@ -256,7 +268,8 @@ function parseJSON(text) {
       name: g.name,
       image: g.image || '',
       url: g.url,
-      code: extractCode(g.name)
+      code: extractCode(g.name),
+      duration: g.duration || ''
     }));
     groups = [{ name: 'วิดีโอทั้งหมด', stations: stations }];
   }
@@ -267,7 +280,8 @@ function parseJSON(text) {
       name: s.name || 'ไม่มีชื่อ',
       image: s.image || '',
       url: s.url || '',
-      code: s.code || extractCode(s.name)
+      code: s.code || extractCode(s.name),
+      duration: s.duration || ''
     })).filter(s => s.url.startsWith('http') && s.url.length > 12)
   })).filter(g => g.stations.length > 0);
 }
@@ -426,8 +440,18 @@ async function run() {
     });
   }
 
-  // Sort descending by health score, then alphabetically by name
+  // Sort descending by: Heedeng & Lovehee first, then health score, then alphabetically by name
   finalIndex.sort((a, b) => {
+    const isHeedengA = a.file && a.file.toLowerCase().includes('heedeng');
+    const isHeedengB = b.file && b.file.toLowerCase().includes('heedeng');
+    const isLoveheeA = a.file && a.file.toLowerCase().includes('lovehee');
+    const isLoveheeB = b.file && b.file.toLowerCase().includes('lovehee');
+
+    if (isHeedengA && !isHeedengB) return -1;
+    if (isHeedengB && !isHeedengA) return 1;
+    if (isLoveheeA && !isLoveheeB) return -1;
+    if (isLoveheeB && !isLoveheeA) return 1;
+
     const healthA = a.health !== undefined ? a.health : 100;
     const healthB = b.health !== undefined ? b.health : 100;
     if (healthB !== healthA) {
