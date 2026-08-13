@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const inputPath = path.join(__dirname, 'scrape_heedeng', 'videos.json');
+const inputPath = path.join(__dirname, 'scrape_heedeng', 'progress.json');
 const outputPath = path.join(__dirname, 'playlists', 'Heedeng.json');
 
 try {
@@ -11,7 +11,8 @@ try {
   }
 
   const content = fs.readFileSync(inputPath, 'utf8');
-  const videos = JSON.parse(content);
+  const parsed = JSON.parse(content);
+  const videos = Array.isArray(parsed) ? parsed : (parsed.videos || []);
 
   const groupsMap = {};
 
