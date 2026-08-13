@@ -872,6 +872,32 @@ mark.search-highlight {
   object-fit: contain;
   display: block;
 }
+#iframe-player {
+  width: 100%; height: 100%;
+  border: none;
+  display: none;
+  background: #000;
+}
+
+/* ── Embed Mode (for iframe player) ── */
+.player-wrap.embed-mode {
+  cursor: default !important;
+}
+.player-wrap.embed-mode #iframe-player {
+  display: block !important;
+}
+.player-wrap.embed-mode #video-player {
+  display: none !important;
+}
+.player-wrap.embed-mode .player-controls,
+.player-wrap.embed-mode .gesture-zone,
+.player-wrap.embed-mode .skip-overlay,
+.player-wrap.embed-mode .swipe-indicator,
+.player-wrap.embed-mode .seek-scrub-overlay,
+.player-wrap.embed-mode .speed-boost-overlay,
+.player-wrap.embed-mode .player-loading {
+  display: none !important;
+}
 
 /* ── Center click zone ── */
 .player-center-click {

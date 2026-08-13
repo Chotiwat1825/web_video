@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 const ROOT_DIR = __dirname;
@@ -16,6 +16,7 @@ const IGNORE_FILES = new Set([
   'playlists_index.json',
   'package.json',
   'package-lock.json',
+  'playlists_detailed_summary.json',
 ]);
 
 function getPlaylistName(content, fileName) {

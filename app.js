@@ -96,6 +96,8 @@ const DOM = {
   modalMetaCode: $('modal-meta-code'),
   modalGroupTag: $('modal-group-tag'),
   videoPlayer:   $('video-player'),
+  iframePlayer:  $('iframe-player'),
+  playerWrap:    $('player-wrap'),
   playerLoading: $('player-loading'),
   relatedGrid:   $('related-grid'),
   toast:         $('toast'),
@@ -1281,11 +1283,27 @@ function openModal(video, idx) {
   }
 }
 
+function isEmbedUrl(url) {
+  if (!url) return false;
+  return url.includes('lumierecore.com') || url.includes('xembed.club') || url.includes('/embed/') || url.includes('embed=true');
+}
+
 function playStream(url) {
   // Clear any existing HLS instances
   if (state.hlsInstance) {
     state.hlsInstance.destroy();
     state.hlsInstance = null;
+  }
+
+  // Toggle Embed/Iframe Mode vs Video tag mode
+  if (isEmbedUrl(url)) {
+    DOM.playerWrap.classList.add('embed-mode');
+    DOM.iframePlayer.src = url;
+    DOM.playerLoading.classList.remove('show');
+    return;
+  } else {
+    DOM.playerWrap.classList.remove('embed-mode');
+    DOM.iframePlayer.src = 'about:blank';
   }
 
   // Wrap external stream URLs with local or remote CORS proxy
@@ -1365,6 +1383,11 @@ function closeModal(e) {
   DOM.videoPlayer.pause();
   DOM.videoPlayer.removeAttribute('src');
   DOM.videoPlayer.load();
+  
+  // Clear iframe to prevent playing in background
+  DOM.iframePlayer.src = 'about:blank';
+  DOM.playerWrap.classList.remove('embed-mode');
+  
   document.body.style.overflow = '';
   window.scrollTo(0, state.lastScrollY);
 

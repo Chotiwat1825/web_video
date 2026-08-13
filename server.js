@@ -178,13 +178,8 @@ const server = http.createServer((req, res) => {
     }
 
     const client = parsedTarget.protocol === 'https:' ? https : http;
-    const targetOrigin = parsedTarget.origin;
-    
-    const headers = {
-      'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Referer': targetOrigin + '/',
-      'Origin': targetOrigin
-    };
+    const headers = {};
+    if (req.headers['user-agent']) headers['User-Agent'] = req.headers['user-agent'];
     if (req.headers['range']) headers['Range'] = req.headers['range'];
     if (req.headers['accept']) headers['Accept'] = req.headers['accept'];
     if (req.headers['accept-encoding']) headers['Accept-Encoding'] = req.headers['accept-encoding'];
