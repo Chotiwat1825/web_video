@@ -1,4 +1,4 @@
-﻿const http = require('http');
+﻿﻿const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
@@ -27,6 +27,28 @@ function getDynamicIndex() {
   const files = fs.readdirSync(PLAYLISTS_DIR);
   const index = [];
   
+  // Load health summary if exists
+  let healthMap = {};
+  const summaryPath = path.join(PUBLIC_DIR, 'playlists_detailed_summary.json');
+  if (fs.existsSync(summaryPath)) {
+    try {
+      let text = fs.readFileSync(summaryPath, 'utf8');
+      if (text.charCodeAt(0) === 0xFEFF) {
+        text = text.substring(1);
+      }
+      const summaryData = JSON.parse(text);
+      summaryData.forEach(item => {
+        healthMap[item.fileName] = {
+          health: parseFloat(item.healthScore),
+          healthScore: item.healthScore,
+          workingVideos: item.workingCount
+        };
+      });
+    } catch (err) {
+      console.error('[Error] Failed to read playlists_detailed_summary.json:', err.message);
+    }
+  }
+  
   for (const file of files) {
     if (!file.endsWith('.json')) continue;
     const filePath = path.join(PLAYLISTS_DIR, file);
@@ -48,6 +70,7 @@ function getDynamicIndex() {
       }
       
       const name = data.name || path.basename(file, '.json');
+      const healthInfo = healthMap[file] || { health: 100, healthScore: '100%', workingVideos: totalVideos };
       
       index.push({
         name: name,
@@ -55,7 +78,10 @@ function getDynamicIndex() {
         type: 'json',
         originalName: file,
         status: '🟢 LOADABLE',
-        totalVideos: totalVideos
+        totalVideos: totalVideos,
+        health: healthInfo.health,
+        healthScore: healthInfo.healthScore,
+        workingVideos: healthInfo.workingVideos
       });
     } catch (err) {
       // Skip invalid or partially written JSON files
@@ -63,8 +89,15 @@ function getDynamicIndex() {
     }
   }
   
-  // Sort alphabetically by Thai/English name
-  return index.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  // Sort descending by health score, then alphabetically by name
+  return index.sort((a, b) => {
+    const healthA = a.health !== undefined ? a.health : 100;
+    const healthB = b.health !== undefined ? b.health : 100;
+    if (healthB !== healthA) {
+      return healthB - healthA;
+    }
+    return a.name.localeCompare(b.name, 'th');
+  });
 }
 
 // Debounce helper to prevent rapid double-writes

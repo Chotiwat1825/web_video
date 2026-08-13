@@ -1,5 +1,5 @@
 ﻿/* ===================================================
-   PlayIDTV — App Logic (Enhanced Edition)
+   PlayIDTV � App Logic (Enhanced Edition)
    =================================================== */
 
 // ── State ──────────────────────────────────────────
@@ -18,6 +18,32 @@ let state = {
   heroVideo:      null,
   heroInterval:   null,
   hlsInstance:    null,   // HLS.js player instance
+}
+
+function openSourceModal() {
+  const overlay = DOM.sourcePanel;
+  if (overlay) {
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    const search = DOM.sourceSearch;
+    if (search) {
+      search.value = '';
+      renderPlaylists();
+      setTimeout(() => search.focus(), 100);
+    }
+  }
+}
+
+function closeSourceModal(e) {
+  const overlay = DOM.sourcePanel;
+  const closeBtn = $('source-modal-close-btn');
+  if (e && e.target !== overlay && e.target !== closeBtn && (!closeBtn || !closeBtn.contains(e.target))) return;
+  if (overlay) {
+    overlay.classList.remove('open');
+    if (!DOM.modalOverlay.classList.contains('open')) {
+      document.body.style.overflow = '';
+    }
+  }
 };
 
 // ── DOM Refs ────────────────────────────────────────
@@ -35,7 +61,7 @@ const DOM = {
   sectionTitle:  $('section-title'),
   videoCount:    $('video-count'),
   loadMoreBtn:   $('load-more-btn'),
-  sourcePanel:   $('source-panel'),
+  sourcePanel:   $('source-modal-overlay'),
   sourceSearch:  $('source-search'),
   sourceList:    $('source-list'),
   searchInput:   $('search-input'),
@@ -72,11 +98,11 @@ async function initApp() {
     loadPlaylist(0);
   } catch (err) {
     console.error('App init error:', err);
-    showToast('❌ ไม่สามารถโหลดรายชื่อเพลย์ลิสต์ได้: ' + err.message);
+    showToast('❌ �������ö��Ŵ��ª���������ʵ���: ' + err.message);
     DOM.videoGrid.innerHTML = `
       <div class="empty-state">
         <div class="emoji">⚠️</div>
-        <p>ไม่พบไฟล์เพลย์ลิสต์ในโฟลเดอร์ playlists/</p>
+        <p>��辺���������ʵ�������� playlists/</p>
       </div>`;
   }
 }
@@ -101,8 +127,7 @@ function setupEventListeners() {
 
   // Source toggle panel
   $('toggle-source-btn').addEventListener('click', () => {
-    const panel = DOM.sourcePanel;
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    openSourceModal();
   });
 
   // Keyboard controls
@@ -121,7 +146,7 @@ function setupEventListeners() {
   });
   DOM.videoPlayer.addEventListener('error', () => {
     DOM.playerLoading.classList.remove('show');
-    showToast('⚠️ ไม่สามารถเล่นไฟล์สตรีมมิ่งนี้ได้ หรือลิงก์หมดอายุ');
+    showToast('⚠️ �������ö������ʵ�����觹���� �����ԧ���������');
   });
 
   // Logo resets to "all"
@@ -160,8 +185,8 @@ function switchPlaylist(idx) {
   if (idx === state.playlistIdx) return;
   clearInterval(state.heroInterval);
   loadPlaylist(idx);
-  DOM.sourcePanel.style.display = 'none';
-  showToast(`📂 โหลดเพลย์ลิสต์: ${state.playlists[idx].name}`);
+  closeSourceModal();
+  showToast(`📂 ��Ŵ������ʵ�: ${state.playlists[idx].name}`);
 }
 
 // ── Load & Parse Playlist ────────────────────────────
@@ -180,6 +205,10 @@ async function loadPlaylist(idx) {
   state.activeGroup = 'all';
   state.searchQuery = '';
   DOM.searchInput.value = '';
+  const tabInputReset = document.getElementById('tab-search-input');
+  if (tabInputReset) tabInputReset.value = '';
+  const clearBtnReset = document.getElementById('search-clear-btn');
+  if (clearBtnReset) clearBtnReset.classList.remove('visible');
 
   renderSkeletons(12);
 
@@ -191,11 +220,11 @@ async function loadPlaylist(idx) {
     processData(parsedData);
   } catch (err) {
     console.error('Playlist load error:', err);
-    showToast('❌ ไม่สามารถอ่านไฟล์นี้ได้: ' + err.message);
+    showToast('❌ �������ö��ҹ�������: ' + err.message);
     DOM.videoGrid.innerHTML = `
       <div class="empty-state">
         <div class="emoji">⚠️</div>
-        <p>ไม่สามารถอ่านไฟล์หรือโครงสร้างเพลย์ลิสต์เสียหาย</p>
+        <p>�������ö��ҹ��������ç���ҧ������ʵ��������</p>
       </div>`;
     DOM.loadMoreBtn.style.display = 'none';
     DOM.videoCount.textContent = '';
@@ -209,18 +238,18 @@ function processData(json) {
 
   // Case: No groups but directly has stations (flat JSON style)
   if (!groups.length && json.stations && Array.isArray(json.stations)) {
-    groups = [{ name: 'วิดีโอทั้งหมด', stations: json.stations }];
+    groups = [{ name: '�Դ��ͷ�����', stations: json.stations }];
   }
 
   groups.forEach((group) => {
-    const gName = group.name || 'ทั่วไป';
+    const gName = group.name || '�����';
     const stations = group.stations || [];
     
     stations.forEach((s) => {
       // Validate that URL exists
       if (s.url && s.url.startsWith('http') && s.url.length > 12) {
         flat.push({
-          name:  s.name  || 'ไม่มีชื่อ',
+          name:  s.name  || '����ժ���',
           image: s.image || '',
           url:   s.url,
           group: gName,
@@ -248,8 +277,8 @@ function extractCode(name) {
 function renderHero(videos) {
   if (!videos.length) {
     DOM.heroBg.style.backgroundImage = '';
-    DOM.heroTitle.textContent = 'ไม่มีข้อมูลวิดีโอ';
-    DOM.heroDesc.textContent = 'กรุณาเลือกแหล่งข้อมูลอื่น';
+    DOM.heroTitle.textContent = '����բ������Դ���';
+    DOM.heroDesc.textContent = '��س����͡���觢��������';
     DOM.heroPlayBtn.onclick = null;
     DOM.heroInfoBtn.onclick = null;
     return;
@@ -263,7 +292,7 @@ function renderHero(videos) {
 
   DOM.heroBg.style.backgroundImage = `url('${pick.image || generatePlaceholder(pick.name)}')`;
   DOM.heroTitle.textContent = pick.name;
-  DOM.heroDesc.textContent = pick.group + ' • ' + (pick.code || 'HD Stream');
+  DOM.heroDesc.textContent = pick.group + ' � ' + (pick.code || 'HD Stream');
 
   DOM.heroBg.classList.add('zooming');
 
@@ -281,7 +310,7 @@ function renderHero(videos) {
     state.heroVideo = next;
     DOM.heroBg.style.backgroundImage = `url('${next.image || generatePlaceholder(next.name)}')`;
     DOM.heroTitle.textContent = next.name;
-    DOM.heroDesc.textContent = next.group + ' • ' + (next.code || 'HD Stream');
+    DOM.heroDesc.textContent = next.group + ' � ' + (next.code || 'HD Stream');
     DOM.heroPlayBtn.onclick = () => openModal(next, state.filteredVideos.indexOf(next));
     DOM.heroInfoBtn.onclick = () => openModal(next, state.filteredVideos.indexOf(next));
   }, 9000);
@@ -306,7 +335,7 @@ function renderGroupFilter(groups) {
 
   DOM.filterScroll.innerHTML = `
     <button class="filter-chip active" id="chip-all" onclick="setActiveGroup('all')">
-      🎬 ทั้งหมด
+      🎬 ������
     </button>
     ${uniqueGroups.map((g, i) => `
       <button class="filter-chip" id="chip-${i}" onclick="setActiveGroup('${escHtml(g)}')">
@@ -361,16 +390,16 @@ function renderVideos(reset = false) {
     DOM.videoGrid.innerHTML = `
       <div class="empty-state">
         <div class="emoji">🔍</div>
-        <p>ไม่พบวิดีโอที่ค้นหาในหมวดหมู่นี้</p>
+        <p>��辺�Դ��ͷ��������Ǵ������</p>
       </div>`;
     DOM.loadMoreBtn.style.display = 'none';
     DOM.videoCount.textContent = '';
     return;
   }
 
-  DOM.videoCount.textContent = `${state.filteredVideos.length} รายการ`;
+  DOM.videoCount.textContent = `${state.filteredVideos.length} ��¡��`;
   DOM.sectionTitle.textContent =
-    state.activeGroup === 'all' ? 'รายการทั้งหมด' : state.activeGroup;
+    state.activeGroup === 'all' ? '��¡�÷�����' : state.activeGroup;
 
   slice.forEach((video, i) => {
     const globalIdx = start + i;
@@ -434,10 +463,10 @@ function renderSkeletons(count) {
     <div class="skeleton-card">
       <div class="skeleton skeleton-thumb"></div>
       <div class="skeleton-body">
-        <div class="skeleton skeleton-line short" style="margin-bottom:8px;height:10px;width:40%"></div>
-        <div class="skeleton skeleton-line" style="height:14px;width:90%;margin-bottom:6px"></div>
-        <div class="skeleton skeleton-line" style="height:14px;width:70%;margin-bottom:12px"></div>
-        <div class="skeleton skeleton-line" style="height:10px;width:50%"></div>
+        <div class="skeleton skeleton-line short"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line" style="width: 70%;"></div>
+        <div class="skeleton skeleton-line" style="width: 50%;"></div>
       </div>
     </div>
   `).join('');
@@ -450,7 +479,7 @@ function openModal(video, idx) {
 
   DOM.modalTitle.textContent    = video.name;
   DOM.modalGroupTag.textContent = video.group;
-  DOM.modalMetaCode.textContent = video.code ? `รหัสหนัง: ${video.code}` : '';
+  DOM.modalMetaCode.textContent = video.code ? `����˹ѧ: ${video.code}` : '';
 
   // Reset video player and load video poster
   DOM.videoPlayer.poster = video.image || '';
@@ -511,7 +540,7 @@ function playStream(url) {
       DOM.videoPlayer.play().catch(() => {});
     } else {
       DOM.playerLoading.classList.remove('show');
-      showToast('⚠️ เบราว์เซอร์ของคุณไม่รองรับการเล่นไฟล์ HLS (.m3u8)');
+      showToast('⚠️ ���������ͧ�س����ͧ�Ѻ��������� HLS (.m3u8)');
     }
   } else {
     // Normal MP4 file playback
@@ -572,8 +601,8 @@ function renderRelated(current) {
 function copyVideoUrl() {
   if (!state.currentVideo) return;
   navigator.clipboard.writeText(state.currentVideo.url)
-    .then(() => showToast('✅ คัดลอกลิงก์วิดีโอแล้ว'))
-    .catch(() => showToast('❌ ไม่สามารถคัดลอกได้'));
+    .then(() => showToast('✅ �Ѵ�͡�ԧ���Դ�������'))
+    .catch(() => showToast('❌ �������ö�Ѵ�͡��'));
 }
 
 // ── Toast Notifications ─────────────────────────────────
