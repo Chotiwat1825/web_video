@@ -523,6 +523,13 @@
             .then(function(reg) {
               console.log('[PWA] Service Worker registered, scope:', reg.scope);
 
+              // Force check for updates when returning from background (Fix for slow iOS PWA updates)
+              document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                  reg.update().catch(err => console.log('SW update check failed', err));
+                }
+              });
+
               // Check for updates periodically
               reg.addEventListener('updatefound', function() {
                 const newWorker = reg.installing;
