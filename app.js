@@ -121,8 +121,9 @@ async function initApp() {
     }
     
     renderPlaylists();
-    // Load the first playlist by default
-    loadPlaylist(0);
+    // Load Heedeng by default, otherwise fallback to the first playlist
+    const defaultIdx = state.playlists.findIndex(p => p.file === 'playlists/Heedeng.json');
+    loadPlaylist(defaultIdx !== -1 ? defaultIdx : 0);
   } catch (err) {
     console.error('App init error:', err);
     showToast(getIcon('cancel') + ' <span>ไม่สามารถโหลดรายชื่อเพลย์ลิสต์ได้: ' + escHtml(err.message) + '</span>');
@@ -944,6 +945,7 @@ function processData(json) {
           url:   s.url,
           group: gName,
           code:  s.code || extractCode(s.name),
+          duration: s.duration || '',
         });
       }
     });
@@ -1136,7 +1138,9 @@ function createVideoCard(video, idx) {
   card.style.animationDelay = `${(idx % state.pageSize) * 20}ms`;
 
   const thumbSrc = video.image || generatePlaceholder(video.name);
-  const extension = video.url.includes('.m3u8') ? 'M3U8' : 'MP4';
+  const isEmbed = isEmbedUrl(video.url);
+  const extension = video.url.includes('.m3u8') ? 'M3U8' : (isEmbed ? 'EMBED' : 'MP4');
+  const durationText = video.duration || extension;
 
   const q = state.searchQuery || '';
   card.innerHTML = `
@@ -1151,7 +1155,7 @@ function createVideoCard(video, idx) {
         <div class="card-play-btn">${getIcon('play')}</div>
       </div>
       ${video.code ? `<span class="card-badge">${escHtml(video.code)}</span>` : ''}
-      <span class="card-duration">${extension}</span>
+      <span class="card-duration">${escHtml(durationText)}</span>
     </div>
     <div class="card-body">
       ${video.code ? `<div class="card-code">${highlightText(video.code, q)}</div>` : ''}

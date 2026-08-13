@@ -29,7 +29,8 @@ try {
       name: video.title,
       image: video.thumbnail || '',
       url: video.embed_url || '',
-      code: ''
+      code: '',
+      duration: video.duration || ''
     });
   });
 
