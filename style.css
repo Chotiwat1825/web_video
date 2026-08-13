@@ -807,7 +807,7 @@ mark.search-highlight {
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
   backdrop-filter: blur(8px);
 }
 .modal-overlay.open { display: flex; animation: fadeIn 0.25s ease; }
