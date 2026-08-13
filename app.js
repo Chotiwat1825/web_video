@@ -1,8 +1,8 @@
 ﻿/* ===================================================
-   PlayIDTV โ€” App Logic (Enhanced Edition)
+   PlayIDTV — App Logic (Enhanced Edition)
    =================================================== */
 
-// โ”€โ”€ State โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── State ──────────────────────────────────────────
 let state = {
   playlists:      [],     // loaded from playlists_index.json
   playlistIdx:    0,      // selected playlist index
@@ -20,7 +20,7 @@ let state = {
   hlsInstance:    null,   // HLS.js player instance
 };
 
-// โ”€โ”€ DOM Refs โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── DOM Refs ────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const DOM = {
   header:        $('site-header'),
@@ -50,7 +50,7 @@ const DOM = {
   toast:         $('toast'),
 };
 
-// โ”€โ”€ Init โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Init ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
   setupEventListeners();
@@ -72,11 +72,11 @@ async function initApp() {
     loadPlaylist(0);
   } catch (err) {
     console.error('App init error:', err);
-    showToast('โ เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธซเธฅเธ”เธฃเธฒเธขเธเธทเนเธญเน€เธเธฅเธขเนเธฅเธดเธชเธ•เนเนเธ”เน: ' + err.message);
+    showToast('❌ ไม่สามารถโหลดรายชื่อเพลย์ลิสต์ได้: ' + err.message);
     DOM.videoGrid.innerHTML = `
       <div class="empty-state">
-        <div class="emoji">โ ๏ธ</div>
-        <p>เนเธกเนเธเธเนเธเธฅเนเน€เธเธฅเธขเนเธฅเธดเธชเธ•เนเนเธเนเธเธฅเน€เธ”เธญเธฃเน playlists/</p>
+        <div class="emoji">⚠️</div>
+        <p>ไม่พบไฟล์เพลย์ลิสต์ในโฟลเดอร์ playlists/</p>
       </div>`;
   }
 }
@@ -121,7 +121,7 @@ function setupEventListeners() {
   });
   DOM.videoPlayer.addEventListener('error', () => {
     DOM.playerLoading.classList.remove('show');
-    showToast('โ ๏ธ เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เน€เธฅเนเธเนเธเธฅเนเธชเธ•เธฃเธตเธกเธกเธดเนเธเธเธตเนเนเธ”เน เธซเธฃเธทเธญเธฅเธดเธเธเนเธซเธกเธ”เธญเธฒเธขเธธ');
+    showToast('⚠️ ไม่สามารถเล่นไฟล์สตรีมมิ่งนี้ได้ หรือลิงก์หมดอายุ');
   });
 
   // Logo resets to "all"
@@ -130,7 +130,7 @@ function setupEventListeners() {
   });
 }
 
-// โ”€โ”€ Render Playlists in Panel โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Render Playlists in Panel ─────────────────────────
 function renderPlaylists(searchQuery = '') {
   let list = state.playlists;
   if (searchQuery) {
@@ -141,7 +141,7 @@ function renderPlaylists(searchQuery = '') {
     const origIdx = state.playlists.indexOf(p);
     const activeClass = origIdx === state.playlistIdx ? 'active' : '';
     // Use general video thumbnail, fallback icons
-    const icon = p.type === 'm3u' ? '๐“บ' : '๐“';
+    const icon = p.type === 'm3u' ? '📺' : '📁';
     
     return `
       <div class="source-item ${activeClass}" onclick="switchPlaylist(${origIdx})">
@@ -161,10 +161,10 @@ function switchPlaylist(idx) {
   clearInterval(state.heroInterval);
   loadPlaylist(idx);
   DOM.sourcePanel.style.display = 'none';
-  showToast(`๐“ เนเธซเธฅเธ”เน€เธเธฅเธขเนเธฅเธดเธชเธ•เน: ${state.playlists[idx].name}`);
+  showToast(`📂 โหลดเพลย์ลิสต์: ${state.playlists[idx].name}`);
 }
 
-// โ”€โ”€ Load & Parse Playlist โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Load & Parse Playlist ────────────────────────────
 async function loadPlaylist(idx) {
   state.playlistIdx = idx;
   const pl = state.playlists[idx];
@@ -191,36 +191,36 @@ async function loadPlaylist(idx) {
     processData(parsedData);
   } catch (err) {
     console.error('Playlist load error:', err);
-    showToast('โ เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธญเนเธฒเธเนเธเธฅเนเธเธตเนเนเธ”เน: ' + err.message);
+    showToast('❌ ไม่สามารถอ่านไฟล์นี้ได้: ' + err.message);
     DOM.videoGrid.innerHTML = `
       <div class="empty-state">
-        <div class="emoji">โ ๏ธ</div>
-        <p>เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธญเนเธฒเธเนเธเธฅเนเธซเธฃเธทเธญเนเธเธฃเธเธชเธฃเนเธฒเธเน€เธเธฅเธขเนเธฅเธดเธชเธ•เนเน€เธชเธตเธขเธซเธฒเธข</p>
+        <div class="emoji">⚠️</div>
+        <p>ไม่สามารถอ่านไฟล์หรือโครงสร้างเพลย์ลิสต์เสียหาย</p>
       </div>`;
     DOM.loadMoreBtn.style.display = 'none';
     DOM.videoCount.textContent = '';
   }
 }
 
-// โ”€โ”€ Process Data into States โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Process Data into States ───────────────────────────
 function processData(json) {
   const flat = [];
   let groups = json.groups || [];
 
   // Case: No groups but directly has stations (flat JSON style)
   if (!groups.length && json.stations && Array.isArray(json.stations)) {
-    groups = [{ name: 'เธงเธดเธ”เธตเนเธญเธ—เธฑเนเธเธซเธกเธ”', stations: json.stations }];
+    groups = [{ name: 'วิดีโอทั้งหมด', stations: json.stations }];
   }
 
   groups.forEach((group) => {
-    const gName = group.name || 'เธ—เธฑเนเธงเนเธ';
+    const gName = group.name || 'ทั่วไป';
     const stations = group.stations || [];
     
     stations.forEach((s) => {
       // Validate that URL exists
       if (s.url && s.url.startsWith('http') && s.url.length > 12) {
         flat.push({
-          name:  s.name  || 'เนเธกเนเธกเธตเธเธทเนเธญ',
+          name:  s.name  || 'ไม่มีชื่อ',
           image: s.image || '',
           url:   s.url,
           group: gName,
@@ -244,12 +244,12 @@ function extractCode(name) {
   return m ? m[1].toUpperCase() : '';
 }
 
-// โ”€โ”€ Hero Banner โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Hero Banner ────────────────────────────────────────
 function renderHero(videos) {
   if (!videos.length) {
     DOM.heroBg.style.backgroundImage = '';
-    DOM.heroTitle.textContent = 'เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเธงเธดเธ”เธตเนเธญ';
-    DOM.heroDesc.textContent = 'เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเนเธซเธฅเนเธเธเนเธญเธกเธนเธฅเธญเธทเนเธ';
+    DOM.heroTitle.textContent = 'ไม่มีข้อมูลวิดีโอ';
+    DOM.heroDesc.textContent = 'กรุณาเลือกแหล่งข้อมูลอื่น';
     DOM.heroPlayBtn.onclick = null;
     DOM.heroInfoBtn.onclick = null;
     return;
@@ -263,7 +263,7 @@ function renderHero(videos) {
 
   DOM.heroBg.style.backgroundImage = `url('${pick.image || generatePlaceholder(pick.name)}')`;
   DOM.heroTitle.textContent = pick.name;
-  DOM.heroDesc.textContent = pick.group + ' โ€ข ' + (pick.code || 'HD Stream');
+  DOM.heroDesc.textContent = pick.group + ' • ' + (pick.code || 'HD Stream');
 
   DOM.heroBg.classList.add('zooming');
 
@@ -281,23 +281,23 @@ function renderHero(videos) {
     state.heroVideo = next;
     DOM.heroBg.style.backgroundImage = `url('${next.image || generatePlaceholder(next.name)}')`;
     DOM.heroTitle.textContent = next.name;
-    DOM.heroDesc.textContent = next.group + ' โ€ข ' + (next.code || 'HD Stream');
+    DOM.heroDesc.textContent = next.group + ' • ' + (next.code || 'HD Stream');
     DOM.heroPlayBtn.onclick = () => openModal(next, state.filteredVideos.indexOf(next));
     DOM.heroInfoBtn.onclick = () => openModal(next, state.filteredVideos.indexOf(next));
   }, 9000);
 }
 
-// โ”€โ”€ Navbar Header Tabs โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Navbar Header Tabs ─────────────────────────────────
 function renderNavTabs(json) {
   const plName = state.playlists[state.playlistIdx].name;
   DOM.navTabs.innerHTML = `
     <button class="nav-tab active" onclick="setActiveGroup('all')">
-      ๐ฌ ${plName}
+      🎬 ${plName}
     </button>
   `;
 }
 
-// โ”€โ”€ Group Filters โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Group Filters ──────────────────────────────────────
 function renderGroupFilter(groups) {
   // Remove empty groups
   const uniqueGroups = groups
@@ -306,7 +306,7 @@ function renderGroupFilter(groups) {
 
   DOM.filterScroll.innerHTML = `
     <button class="filter-chip active" id="chip-all" onclick="setActiveGroup('all')">
-      ๐ฌ เธ—เธฑเนเธเธซเธกเธ”
+      🎬 ทั้งหมด
     </button>
     ${uniqueGroups.map((g, i) => `
       <button class="filter-chip" id="chip-${i}" onclick="setActiveGroup('${escHtml(g)}')">
@@ -330,7 +330,7 @@ function setActiveGroup(group) {
   applyFilter();
 }
 
-// โ”€โ”€ Apply Query and Filters โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Apply Query and Filters ───────────────────────────
 function applyFilter() {
   let videos = [...state.allVideos];
 
@@ -349,7 +349,7 @@ function applyFilter() {
   renderVideos(true);
 }
 
-// โ”€โ”€ Render Video Grid โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Render Video Grid ──────────────────────────────────
 function renderVideos(reset = false) {
   if (reset) DOM.videoGrid.innerHTML = '';
 
@@ -360,17 +360,17 @@ function renderVideos(reset = false) {
   if (state.filteredVideos.length === 0) {
     DOM.videoGrid.innerHTML = `
       <div class="empty-state">
-        <div class="emoji">๐”</div>
-        <p>เนเธกเนเธเธเธงเธดเธ”เธตเนเธญเธ—เธตเนเธเนเธเธซเธฒเนเธเธซเธกเธงเธ”เธซเธกเธนเนเธเธตเน</p>
+        <div class="emoji">🔍</div>
+        <p>ไม่พบวิดีโอที่ค้นหาในหมวดหมู่นี้</p>
       </div>`;
     DOM.loadMoreBtn.style.display = 'none';
     DOM.videoCount.textContent = '';
     return;
   }
 
-  DOM.videoCount.textContent = `${state.filteredVideos.length} เธฃเธฒเธขเธเธฒเธฃ`;
+  DOM.videoCount.textContent = `${state.filteredVideos.length} รายการ`;
   DOM.sectionTitle.textContent =
-    state.activeGroup === 'all' ? 'เธฃเธฒเธขเธเธฒเธฃเธ—เธฑเนเธเธซเธกเธ”' : state.activeGroup;
+    state.activeGroup === 'all' ? 'รายการทั้งหมด' : state.activeGroup;
 
   slice.forEach((video, i) => {
     const globalIdx = start + i;
@@ -397,10 +397,10 @@ function createVideoCard(video, idx) {
         src="${escHtml(thumbSrc)}"
         alt="${escHtml(video.name)}"
         loading="lazy"
-        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22200%22><rect fill=%22%231a1a28%22 width=%22320%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%23606080%22 font-size=%2248%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>๐ฌ</text></svg>'"
+        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22200%22><rect fill=%22%231a1a28%22 width=%22320%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%23606080%22 font-size=%2248%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>🎬</text></svg>'"
       />
       <div class="card-play-overlay">
-        <div class="card-play-btn">โ–ถ</div>
+        <div class="card-play-btn">▶</div>
       </div>
       ${video.code ? `<span class="card-badge">${escHtml(video.code)}</span>` : ''}
       <span class="card-duration">${extension}</span>
@@ -420,7 +420,7 @@ function createVideoCard(video, idx) {
 }
 
 function generatePlaceholder(name) {
-  return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect fill="%231a1a28" width="320" height="200"/><text x="50%" y="50%" fill="%23606080" font-size="48" text-anchor="middle" dominant-baseline="middle">๐ฌ</text></svg>`;
+  return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect fill="%231a1a28" width="320" height="200"/><text x="50%" y="50%" fill="%23606080" font-size="48" text-anchor="middle" dominant-baseline="middle">🎬</text></svg>`;
 }
 
 function loadMore() {
@@ -428,7 +428,7 @@ function loadMore() {
   renderVideos(false);
 }
 
-// โ”€โ”€ Skeletons โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Skeletons ──────────────────────────────────────────
 function renderSkeletons(count) {
   DOM.videoGrid.innerHTML = Array.from({ length: count }, () => `
     <div class="skeleton-card">
@@ -443,14 +443,14 @@ function renderSkeletons(count) {
   `).join('');
 }
 
-// โ”€โ”€ Video Player Modal โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Video Player Modal ─────────────────────────────────
 function openModal(video, idx) {
   state.currentVideo = video;
   state.currentIndex = idx >= 0 ? idx : state.filteredVideos.indexOf(video);
 
   DOM.modalTitle.textContent    = video.name;
   DOM.modalGroupTag.textContent = video.group;
-  DOM.modalMetaCode.textContent = video.code ? `เธฃเธซเธฑเธชเธซเธเธฑเธ: ${video.code}` : '';
+  DOM.modalMetaCode.textContent = video.code ? `รหัสหนัง: ${video.code}` : '';
 
   // Reset video player and load video poster
   DOM.videoPlayer.poster = video.image || '';
@@ -511,7 +511,7 @@ function playStream(url) {
       DOM.videoPlayer.play().catch(() => {});
     } else {
       DOM.playerLoading.classList.remove('show');
-      showToast('โ ๏ธ เน€เธเธฃเธฒเธงเนเน€เธเธญเธฃเนเธเธญเธเธเธธเธ“เนเธกเนเธฃเธญเธเธฃเธฑเธเธเธฒเธฃเน€เธฅเนเธเนเธเธฅเน HLS (.m3u8)');
+      showToast('⚠️ เบราว์เซอร์ของคุณไม่รองรับการเล่นไฟล์ HLS (.m3u8)');
     }
   } else {
     // Normal MP4 file playback
@@ -560,7 +560,7 @@ function renderRelated(current) {
           src="${escHtml(v.image || '')}"
           alt="${escHtml(v.name)}"
           loading="lazy"
-          onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22100%22><rect fill=%22%231a1a28%22 width=%22160%22 height=%22100%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%23606080%22 font-size=%2230%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>๐ฌ</text></svg>'"
+          onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22100%22><rect fill=%22%231a1a28%22 width=%22160%22 height=%22100%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%23606080%22 font-size=%2230%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>🎬</text></svg>'"
         />
       </div>
       <div class="related-title">${escHtml(v.name)}</div>
@@ -568,15 +568,15 @@ function renderRelated(current) {
   `).join('');
 }
 
-// โ”€โ”€ Actions โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Actions ────────────────────────────────────────────
 function copyVideoUrl() {
   if (!state.currentVideo) return;
   navigator.clipboard.writeText(state.currentVideo.url)
-    .then(() => showToast('โ… เธเธฑเธ”เธฅเธญเธเธฅเธดเธเธเนเธงเธดเธ”เธตเนเธญเนเธฅเนเธง'))
-    .catch(() => showToast('โ เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธเธฑเธ”เธฅเธญเธเนเธ”เน'));
+    .then(() => showToast('✅ คัดลอกลิงก์วิดีโอแล้ว'))
+    .catch(() => showToast('❌ ไม่สามารถคัดลอกได้'));
 }
 
-// โ”€โ”€ Toast Notifications โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── Toast Notifications ─────────────────────────────────
 let toastTimer = null;
 function showToast(msg) {
   DOM.toast.textContent = msg;
@@ -585,7 +585,7 @@ function showToast(msg) {
   toastTimer = setTimeout(() => DOM.toast.classList.remove('show'), 2800);
 }
 
-// โ”€โ”€ HTML Escape Utility โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+// ── HTML Escape Utility ─────────────────────────────────
 function escHtml(str) {
   return String(str || '')
     .replace(/&/g, '&amp;')

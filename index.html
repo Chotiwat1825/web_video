@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PlayIDTV โ€” เธชเธ•เธฃเธตเธกเธกเธดเนเธเธงเธดเธ”เธตเนเธญ</title>
-  <meta name="description" content="เธ”เธนเธงเธดเธ”เธตเนเธญเธญเธญเธเนเธฅเธเนเธเธฃเธต เธเธธเธ“เธ เธฒเธเธชเธนเธ เธญเธฑเธเน€เธ”เธ—เนเธซเธกเนเธ—เธธเธเธงเธฑเธ" />
+  <title>PlayIDTV — สตรีมมิ่งวิดีโอ</title>
+  <meta name="description" content="ดูวิดีโอออนไลน์ฟรี คุณภาพสูง อัพเดทใหม่ทุกวัน" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -18,7 +18,7 @@
   <header id="site-header">
     <div class="header-inner">
       <div class="logo" id="logo-btn">
-        <span class="logo-icon">โ–ถ</span>
+        <span class="logo-icon">▶</span>
         <span class="logo-text">PlayIDTV</span>
       </div>
 
@@ -28,12 +28,12 @@
 
       <div class="header-actions">
         <div class="search-wrap">
-          <input type="text" id="search-input" class="search-input" placeholder="เธเนเธเธซเธฒเธงเธดเธ”เธตเนเธญ..." />
-          <span class="search-icon">๐”</span>
+          <input type="text" id="search-input" class="search-input" placeholder="ค้นหาวิดีโอ..." />
+          <span class="search-icon">🔍</span>
         </div>
-        <button class="btn-source" id="toggle-source-btn" title="เน€เธเธฅเธตเนเธขเธเนเธซเธฅเนเธเธเนเธญเธกเธนเธฅ">
-          <span class="btn-source-icon">๐“</span>
-          <span>เนเธซเธฅเนเธเธเนเธญเธกเธนเธฅ</span>
+        <button class="btn-source" id="toggle-source-btn" title="เปลี่ยนแหล่งข้อมูล">
+          <span class="btn-source-icon">📂</span>
+          <span>แหล่งข้อมูล</span>
         </button>
       </div>
     </div>
@@ -44,15 +44,15 @@
     <div class="hero-bg" id="hero-bg"></div>
     <div class="hero-overlay"></div>
     <div class="hero-content" id="hero-content">
-      <div class="hero-badge">๐”ฅ เนเธเธฐเธเธณ</div>
-      <h1 class="hero-title" id="hero-title">เธเธณเธฅเธฑเธเนเธซเธฅเธ”...</h1>
-      <p class="hero-desc" id="hero-desc">เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธเนเธญเธกเธนเธฅ...</p>
+      <div class="hero-badge">🔥 แนะนำ</div>
+      <h1 class="hero-title" id="hero-title">กำลังโหลด...</h1>
+      <p class="hero-desc" id="hero-desc">กำลังโหลดข้อมูล...</p>
       <div class="hero-actions">
         <button class="btn-play" id="hero-play-btn">
-          <span>โ–ถ</span> เน€เธฅเนเธเน€เธฅเธข
+          <span>▶</span> เล่นเลย
         </button>
         <button class="btn-info" id="hero-info-btn">
-          <span>โน</span> เธ”เธนเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”
+          <span>ℹ</span> ดูรายละเอียด
         </button>
       </div>
     </div>
@@ -64,8 +64,8 @@
     <!-- Source selector panel -->
     <div class="source-panel" id="source-panel" style="display:none;">
       <div class="source-panel-header">
-        <h3>๐“ เน€เธฅเธทเธญเธเนเธซเธฅเนเธเธเนเธญเธกเธนเธฅ</h3>
-        <input type="text" id="source-search" placeholder="เธเนเธเธซเธฒเน€เธเธฅเธขเนเธฅเธดเธชเธ•เน..." class="source-search-input" />
+        <h3>📂 เลือกแหล่งข้อมูล</h3>
+        <input type="text" id="source-search" placeholder="ค้นหาเพลย์ลิสต์..." class="source-search-input" />
       </div>
       <div class="source-list" id="source-list">
         <!-- dynamically inserted from playlists_index.json -->
@@ -81,7 +81,7 @@
 
     <!-- Video grid -->
     <div class="section-header">
-      <h2 class="section-title" id="section-title">เธฃเธฒเธขเธเธฒเธฃเธ—เธฑเนเธเธซเธกเธ”</h2>
+      <h2 class="section-title" id="section-title">รายการทั้งหมด</h2>
       <span class="video-count" id="video-count"></span>
     </div>
 
@@ -90,7 +90,7 @@
     </div>
 
     <div class="load-more-wrap">
-      <button class="btn-load-more" id="load-more-btn" onclick="loadMore()">เนเธซเธฅเธ”เน€เธเธดเนเธกเน€เธ•เธดเธก โ“</button>
+      <button class="btn-load-more" id="load-more-btn" onclick="loadMore()">โหลดเพิ่มเติม ↓</button>
     </div>
 
   </main>
@@ -98,7 +98,7 @@
   <!-- ===== VIDEO PLAYER MODAL ===== -->
   <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
     <div class="modal-container" id="modal-container">
-      <button class="modal-close" id="modal-close-btn" onclick="closeModal()">โ•</button>
+      <button class="modal-close" id="modal-close-btn" onclick="closeModal()">✕</button>
 
       <!-- Video Player -->
       <div class="player-wrap">
@@ -112,7 +112,7 @@
         ></video>
         <div class="player-loading" id="player-loading">
           <div class="spinner"></div>
-          <p>เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธงเธดเธ”เธตเนเธญ...</p>
+          <p>กำลังโหลดวิดีโอ...</p>
         </div>
       </div>
 
@@ -128,12 +128,12 @@
           <span id="modal-meta-code"></span>
         </div>
         <div class="modal-actions">
-          <button class="btn-modal-action" id="btn-prev" onclick="navigateVideo(-1)">โฌ… เธเนเธญเธเธซเธเนเธฒ</button>
-          <button class="btn-modal-action" id="btn-next" onclick="navigateVideo(1)">เธ–เธฑเธ”เนเธ โก</button>
-          <button class="btn-modal-action" onclick="copyVideoUrl()">๐”— เธเธฑเธ”เธฅเธญเธเธฅเธดเธเธเน</button>
+          <button class="btn-modal-action" id="btn-prev" onclick="navigateVideo(-1)">⬅ ก่อนหน้า</button>
+          <button class="btn-modal-action" id="btn-next" onclick="navigateVideo(1)">ถัดไป ➡</button>
+          <button class="btn-modal-action" onclick="copyVideoUrl()">🔗 คัดลอกลิงก์</button>
         </div>
         <div class="related-videos" id="related-videos">
-          <h4>เธงเธดเธ”เธตเนเธญเธ—เธตเนเน€เธเธตเนเธขเธงเธเนเธญเธ</h4>
+          <h4>วิดีโอที่เกี่ยวข้อง</h4>
           <div class="related-grid" id="related-grid"></div>
         </div>
       </div>

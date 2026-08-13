@@ -1,4 +1,4 @@
-const http = require('http');
+﻿const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
@@ -54,7 +54,7 @@ function getDynamicIndex() {
         file: `playlists/${file}`,
         type: 'json',
         originalName: file,
-        status: '๐ข LOADABLE',
+        status: '🟢 LOADABLE',
         totalVideos: totalVideos
       });
     } catch (err) {
@@ -150,18 +150,7 @@ const server = http.createServer((req, res) => {
   });
 });
 
-function startServer(port) {
-  server.listen(port, () => {
-    console.log(`\n🚀 Dynamic Video streaming server running at http://localhost:${port}`);
-    console.log(`📂 Playlists folder: ${PLAYLISTS_DIR}`);
-  }).on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.log(`Port ${port} is in use. Trying port ${port + 1}...`);
-      startServer(port + 1);
-    } else {
-      console.error('Server error:', err);
-    }
-  });
-}
-
-startServer(PORT);
+server.listen(PORT, () => {
+  console.log(`\n🚀 Dynamic Video streaming server running at http://localhost:${PORT}`);
+  console.log(`📁 Playlists folder: ${PLAYLISTS_DIR}`);
+});

@@ -1,5 +1,5 @@
 ﻿/* ===================================================
-   PlayIDTV โ€” Premium Dark Streaming UI
+   PlayIDTV — Premium Dark Streaming UI
    =================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -439,6 +439,7 @@ img { display: block; max-width: 100%; }
   color: var(--accent-secondary);
   border: 1px solid rgba(229, 9, 20, 0.3);
 }
+
 /* ======= GROUP FILTER ======= */
 .group-filter {
   margin-bottom: 28px;

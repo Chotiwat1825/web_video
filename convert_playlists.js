@@ -9,110 +9,110 @@ function extractCode(name) {
   return m ? m[1].toUpperCase() : '';
 }
 
-// โ”€โ”€ Custom Beautiful Naming Rules โ”€โ”€
+// ── Custom Beautiful Naming Rules ──
 function getBeautifulName(parsedName) {
   const name = parsedName.trim();
   
   const mappings = {
     "All": {
-      fileName: "av24flix_เธฃเธงเธกเธงเธดเธ”เธตเนเธญเธ—เธฑเนเธเธซเธกเธ”.json",
-      title: "av24flix - เธฃเธงเธกเธงเธดเธ”เธตเนเธญเธ—เธฑเนเธเธซเธกเธ”"
+      fileName: "av24flix_รวมวิดีโอทั้งหมด.json",
+      title: "av24flix - รวมวิดีโอทั้งหมด"
     },
-    "Asia - เธซเธเธฑเธเน€เธญเน€เธเธตเธข": {
-      fileName: "av24flix_เธซเธเธฑเธเน€เธญเน€เธเธตเธข.json",
-      title: "av24flix - เธซเธเธฑเธเน€เธญเน€เธเธตเธข"
+    "Asia - หนังเอเชีย": {
+      fileName: "av24flix_หนังเอเชีย.json",
+      title: "av24flix - หนังเอเชีย"
     },
-    "Japan - เธซเธเธฑเธเธเธตเนเธเธธเนเธ": {
-      fileName: "av24flix_เธซเธเธฑเธเธเธตเนเธเธธเนเธ.json",
-      title: "av24flix - เธซเธเธฑเธเธเธตเนเธเธธเนเธ"
+    "Japan - หนังญี่ปุ่น": {
+      fileName: "av24flix_หนังญี่ปุ่น.json",
+      title: "av24flix - หนังญี่ปุ่น"
     },
-    "Thai - เธซเธเธฑเธเนเธ—เธข": {
-      fileName: "av24flix_เธซเธเธฑเธเนเธ—เธข.json",
-      title: "av24flix - เธซเธเธฑเธเนเธ—เธข"
+    "Thai - หนังไทย": {
+      fileName: "av24flix_หนังไทย.json",
+      title: "av24flix - หนังไทย"
     },
-    "Western - เธซเธเธฑเธเธเธฃเธฑเนเธ": {
-      fileName: "av24flix_เธซเธเธฑเธเธเธฃเธฑเนเธ.json",
-      title: "av24flix - เธซเธเธฑเธเธเธฃเธฑเนเธ"
+    "Western - หนังฝรั่ง": {
+      fileName: "av24flix_หนังฝรั่ง.json",
+      title: "av24flix - หนังฝรั่ง"
     },
     "av24flix": {
-      fileName: "av24flix_เน€เธกเธเธนเธซเธฅเธฑเธ.json",
-      title: "av24flix - เน€เธกเธเธนเธซเธฅเธฑเธ"
+      fileName: "av24flix_เมนูหลัก.json",
+      title: "av24flix - เมนูหลัก"
     },
     "AV UNCENSORED": {
-      fileName: "AV_เนเธกเนเน€เธเธเน€เธเธญเธฃเน_jav69xxx.json",
-      title: "AV Uncensored (เนเธกเนเน€เธเธเน€เธเธญเธฃเน - jav69xxx)"
+      fileName: "AV_ไม่เซนเซอร์_jav69xxx.json",
+      title: "AV Uncensored (ไม่เซนเซอร์ - jav69xxx)"
     },
     "EXTINF": {
-      fileName: "AV_เธเธฑเธเนเธ—เธข_Samorn_Team.json",
-      title: "AV เธเธฑเธเนเธ—เธข - Samorn Team"
+      fileName: "AV_ซับไทย_Samorn_Team.json",
+      title: "AV ซับไทย - Samorn Team"
     },
-    "๐’–Good for heart๐’GEN2": {
-      fileName: "เธ•เธนเนเธเธฑเธเธเนเธฒเธง_Good_for_heart_Gen2.json",
-      title: "เธ•เธนเนเธเธฑเธเธเนเธฒเธง - Good for heart Gen2"
+    "💖Good for heart💋GEN2": {
+      fileName: "ตู้กับข้าว_Good_for_heart_Gen2.json",
+      title: "ตู้กับข้าว - Good for heart Gen2"
     },
-    "H-Anime [เธเธฑเธเนเธ—เธข]": {
-      fileName: "เธ•เธนเนเธเธเธเธดเธ_H-Anime_เธเธฑเธเนเธ—เธข.json",
-      title: "เธ•เธนเนเธเธเธเธดเธ - H-Anime เธเธฑเธเนเธ—เธข"
+    "H-Anime [ซับไทย]": {
+      fileName: "ตู้นกบิน_H-Anime_ซับไทย.json",
+      title: "ตู้นกบิน - H-Anime ซับไทย"
     },
-    "๐’–JAV๐’–": {
-      fileName: "เธ•เธนเนเน€เธญเธ_JAV_เนเธญเธเธดเน€เธกเธฐ.json",
-      title: "เธ•เธนเนเน€เธญเธ - JAV & Anime"
+    "💖JAV💖": {
+      fileName: "ตู้เอก_JAV_แอนิเมะ.json",
+      title: "ตู้เอก - JAV & Anime"
     },
-    "๐’–JAV ALL STARS๐’–": {
-      fileName: "เธ•เธนเนAllStars_JAV.json",
-      title: "เธ•เธนเน All Stars - JAV"
+    "💖JAV ALL STARS💖": {
+      fileName: "ตู้AllStars_JAV.json",
+      title: "ตู้ All Stars - JAV"
     },
     "JAV_ SUBTHAI_2": {
-      fileName: "เธ•เธนเนเธ—เธตเน2_JAV_SUBTHAI_2.json",
-      title: "เธ•เธนเนเธ—เธตเน 2 - JAV เธเธฑเธเนเธ—เธข"
+      fileName: "ตู้ที่2_JAV_SUBTHAI_2.json",
+      title: "ตู้ที่ 2 - JAV ซับไทย"
     },
     "JAV SUBTHAI_3": {
-      fileName: "เธ•เธนเนเธ—เธตเน3_JAV_SUBTHAI_3.json",
-      title: "เธ•เธนเนเธ—เธตเน 3 - JAV เธเธฑเธเนเธ—เธข"
+      fileName: "ตู้ที่3_JAV_SUBTHAI_3.json",
+      title: "ตู้ที่ 3 - JAV ซับไทย"
     },
     "JAV_UNCENSORED": {
-      fileName: "เธ•เธนเนUncensored_JAV.json",
-      title: "เธ•เธนเน Uncensored - JAV เนเธกเนเน€เธเธเน€เธเธญเธฃเน"
+      fileName: "ตู้Uncensored_JAV.json",
+      title: "ตู้ Uncensored - JAV ไม่เซนเซอร์"
     },
     "JAV_UPDATE_2": {
-      fileName: "JAV_เธญเธฑเธเน€เธ”เธ•_เธเธธเธ”เธ—เธตเน2.json",
-      title: "JAV เธญเธฑเธเน€เธ”เธ• - เธเธธเธ”เธ—เธตเน 2"
+      fileName: "JAV_อัปเดต_ชุดที่2.json",
+      title: "JAV อัปเดต - ชุดที่ 2"
     },
     "JAV_UPDATE_3": {
-      fileName: "JAV_เธญเธฑเธเน€เธ”เธ•_เธเธธเธ”เธ—เธตเน3.json",
-      title: "JAV เธญเธฑเธเน€เธ”เธ• - เธเธธเธ”เธ—เธตเน 3"
+      fileName: "JAV_อัปเดต_ชุดที่3.json",
+      title: "JAV อัปเดต - ชุดที่ 3"
     },
     "JAV_UPDATE_4": {
-      fileName: "JAV_เธญเธฑเธเน€เธ”เธ•_เธเธธเธ”เธ—เธตเน4.json",
-      title: "JAV เธญเธฑเธเน€เธ”เธ• - เธเธธเธ”เธ—เธตเน 4"
+      fileName: "JAV_อัปเดต_ชุดที่4.json",
+      title: "JAV อัปเดต - ชุดที่ 4"
     },
     "JAV_UPDATE_5": {
-      fileName: "JAV_เธญเธฑเธเน€เธ”เธ•_เธเธธเธ”เธ—เธตเน5.json",
-      title: "JAV เธญเธฑเธเน€เธ”เธ• - เธเธธเธ”เธ—เธตเน 5"
+      fileName: "JAV_อัปเดต_ชุดที่5.json",
+      title: "JAV อัปเดต - ชุดที่ 5"
     },
     "JAV_UPDATE_6": {
-      fileName: "JAV_เธญเธฑเธเน€เธ”เธ•_เธเธธเธ”เธ—เธตเน6.json",
-      title: "JAV เธญเธฑเธเน€เธ”เธ• - เธเธธเธ”เธ—เธตเน 6"
+      fileName: "JAV_อัปเดต_ชุดที่6.json",
+      title: "JAV อัปเดต - ชุดที่ 6"
     },
-    "JAV เธญเธฑเธเน€เธ”เธ—4เธช.เธ/66": {
-      fileName: "JAV_เธญเธฑเธเน€เธ”เธ•_4เธชเธ66.json",
-      title: "JAV เธญเธฑเธเน€เธ”เธ• - 4 เธช.เธ. 66"
+    "JAV อัพเดท4ส.ค/66": {
+      fileName: "JAV_อัปเดต_4สค66.json",
+      title: "JAV อัปเดต - 4 ส.ค. 66"
     },
     "SEXY": {
-      fileName: "เธ•เธนเนเธเธฒเนเธ_SEXY.json",
-      title: "เธ•เธนเนเธเธฒเนเธ - SEXY"
+      fileName: "ตู้กาแฟ_SEXY.json",
+      title: "ตู้กาแฟ - SEXY"
     },
-    "เธ•เธนเนเธเธฒเธเธฒเธเธฒเธ•เธด": {
-      fileName: "เธ•เธนเนเธเธฒเธเธฒเธเธฒเธ•เธด_International.json",
-      title: "เธ•เธนเนเธเธฒเธเธฒเธเธฒเธ•เธด (International)"
+    "ตู้นานาชาติ": {
+      fileName: "ตู้นานาชาติ_International.json",
+      title: "ตู้นานาชาติ (International)"
     },
-    "เธ•เธนเนเธเธฑเธเธชเธธเธ ๐”": {
-      fileName: "เธ•เธนเนเธเธฑเธเธชเธธเธ_เน€เธกเธเธนเธซเธฅเธฑเธ.json",
-      title: "เธ•เธนเนเธเธฑเธเธชเธธเธ ๐” (เน€เธกเธเธนเธซเธฅเธฑเธ)"
+    "ตู้ปันสุข 🔞": {
+      fileName: "ตู้ปันสุข_เมนูหลัก.json",
+      title: "ตู้ปันสุข 🔞 (เมนูหลัก)"
     },
-    "เน€เธฃเธ— เธญเธฒเธฃเน": {
-      fileName: "เธ•เธนเนเน€เธฃเธ—เธญเธฒเธฃเน_RATE_R.json",
-      title: "เธ•เธนเนเน€เธฃเธ—เธญเธฒเธฃเน (Rate R)"
+    "เรท อาร์": {
+      fileName: "ตู้เรทอาร์_RATE_R.json",
+      title: "ตู้เรทอาร์ (Rate R)"
     }
   };
 
@@ -122,7 +122,7 @@ function getBeautifulName(parsedName) {
 
   // Fallback cleaning
   const clean = name
-    .replace(/[^a-zA-Z0-9เธ-เน_-]/g, '_')
+    .replace(/[^a-zA-Z0-9ก-๙_-]/g, '_')
     .replace(/__+/g, '_')
     .replace(/^_+|_+$/g, '');
   return {
@@ -131,7 +131,7 @@ function getBeautifulName(parsedName) {
   };
 }
 
-// โ”€โ”€ Parse M3U โ”€โ”€
+// ── Parse M3U ──
 function parseM3U(text) {
   const lines = text.split(/\r?\n/);
   const stations = [];
@@ -144,7 +144,7 @@ function parseM3U(text) {
     if (line.startsWith('#EXTINF:')) {
       current = {};
       const grp = line.match(/group-title="([^"]+)"/) || line.match(/group="([^"]+)"/);
-      current.group = grp ? grp[1].trim() : 'เธ—เธฑเนเธงเนเธ';
+      current.group = grp ? grp[1].trim() : 'ทั่วไป';
 
       const logo = line.match(/tvg-logo="([^"]+)"/) || line.match(/logo="([^"]+)"/);
       current.image = logo ? logo[1].trim() : '';
@@ -153,7 +153,7 @@ function parseM3U(text) {
       if (commaIdx !== -1) {
         current.name = line.substring(commaIdx + 1).trim();
       } else {
-        current.name = 'เนเธกเนเธกเธตเธเธทเนเธญ';
+        current.name = 'ไม่มีชื่อ';
       }
     } else if (line.startsWith('#')) {
       continue;
@@ -185,7 +185,7 @@ function parseM3U(text) {
   return Object.values(groupsMap);
 }
 
-// โ”€โ”€ Parse Loose JSON Regex Fallback โ”€โ”€
+// ── Parse Loose JSON Regex Fallback ──
 function regexFallbackJSON(text) {
   const stations = [];
   const objRegex = /\{[^{}]+\}/g;
@@ -204,7 +204,7 @@ function regexFallbackJSON(text) {
           name: nameMatch[1],
           image: imageMatch ? imageMatch[1] : '',
           url: urlStr,
-          group: groupMatch ? groupMatch[1] : 'เธ—เธฑเนเธงเนเธ',
+          group: groupMatch ? groupMatch[1] : 'ทั่วไป',
           code: extractCode(nameMatch[1])
         });
       }
@@ -227,7 +227,7 @@ function regexFallbackJSON(text) {
   return Object.values(groupsMap);
 }
 
-// โ”€โ”€ Parse JSON / Loose JSON โ”€โ”€
+// ── Parse JSON / Loose JSON ──
 function parseJSON(text) {
   let parsed = null;
   try {
@@ -247,7 +247,7 @@ function parseJSON(text) {
   let groups = parsed.groups || [];
 
   if (!groups.length && parsed.stations && Array.isArray(parsed.stations)) {
-    groups = [{ name: 'เธงเธดเธ”เธตเนเธญเธ—เธฑเนเธเธซเธกเธ”', stations: parsed.stations }];
+    groups = [{ name: 'วิดีโอทั้งหมด', stations: parsed.stations }];
   }
 
   const hasNestedStations = groups.some(g => g.stations && Array.isArray(g.stations));
@@ -258,13 +258,13 @@ function parseJSON(text) {
       url: g.url,
       code: extractCode(g.name)
     }));
-    groups = [{ name: 'เธงเธดเธ”เธตเนเธญเธ—เธฑเนเธเธซเธกเธ”', stations: stations }];
+    groups = [{ name: 'วิดีโอทั้งหมด', stations: stations }];
   }
 
   return groups.map(g => ({
-    name: g.name || 'เธ—เธฑเนเธงเนเธ',
+    name: g.name || 'ทั่วไป',
     stations: (g.stations || []).map(s => ({
-      name: s.name || 'เนเธกเนเธกเธตเธเธทเนเธญ',
+      name: s.name || 'ไม่มีชื่อ',
       image: s.image || '',
       url: s.url || '',
       code: s.code || extractCode(s.name)
@@ -286,7 +286,10 @@ async function run() {
   // 1. Parse all files
   for (const file of files) {
     const filePath = path.join(PLAYLISTS_DIR, file);
-    const text = fs.readFileSync(filePath, 'utf8').trim();
+    let text = fs.readFileSync(filePath, 'utf8').trim();
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.substring(1);
+    }
     if (!text) continue;
 
     const isM3u = file.toLowerCase().endsWith('.m3u') || text.startsWith('#EXTM3U');
@@ -302,7 +305,7 @@ async function run() {
     try {
       groups = isM3u ? parseM3U(text) : parseJSON(text);
     } catch (err) {
-      console.error(`โ Failed to parse ${file}: ${err.message}`);
+      console.error(`❌ Failed to parse ${file}: ${err.message}`);
       continue;
     }
 
@@ -310,7 +313,7 @@ async function run() {
     groups.forEach(g => g.stations.forEach(s => urls.push(s.url)));
 
     if (urls.length === 0) {
-      console.log(`โ ๏ธ Playlist ${file} is empty, skipping.`);
+      console.log(`⚠️ Playlist ${file} is empty, skipping.`);
       continue;
     }
 
@@ -353,7 +356,7 @@ async function run() {
       // Strict duplicate detection (excludes subsets like Japan list vs All list)
       if (similarity > 0.98 || (similarity > 0.90 && sizeDiff < 15)) {
         duplicates.add(j);
-        console.log(`โป๏ธ Found duplicate: "${p2.originalFile}" matches "${p1.originalFile}" (${(similarity * 100).toFixed(1)}% match, size diff: ${sizeDiff}).`);
+        console.log(`♻️ Found duplicate: "${p2.originalFile}" matches "${p1.originalFile}" (${(similarity * 100).toFixed(1)}% match, size diff: ${sizeDiff}).`);
       }
     }
   }
@@ -365,14 +368,18 @@ async function run() {
   filesToDelete.forEach(file => {
     fs.unlinkSync(path.join(PLAYLISTS_DIR, file));
   });
-  console.log('๐งน Cleaned playlists/ directory for clean write.');
+  console.log('🧹 Cleaned playlists/ directory for clean write.');
 
   // Load health summary if exists
   let healthMap = {};
   const summaryPath = path.join(__dirname, 'playlists_detailed_summary.json');
   if (fs.existsSync(summaryPath)) {
     try {
-      const summaryData = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+      let text = fs.readFileSync(summaryPath, 'utf8');
+      if (text.charCodeAt(0) === 0xFEFF) {
+        text = text.substring(1);
+      }
+      const summaryData = JSON.parse(text);
       summaryData.forEach(item => {
         healthMap[item.fileName] = {
           health: parseFloat(item.healthScore),
@@ -393,7 +400,7 @@ async function run() {
     const info = getBeautifulName(pl.name);
     console.log(`Processing "${pl.name}" -> Renaming to "${info.title}" (${info.fileName})`);
 
-    const statusBadge = '๐ข LOADABLE';
+    const statusBadge = '🟢 LOADABLE';
     const newPath = path.join(PLAYLISTS_DIR, info.fileName);
 
     const standardJSON = {
