@@ -71,7 +71,6 @@ function openSourceModal() {
     if (search) {
       search.value = '';
       renderPlaylists();
-      setTimeout(() => search.focus(), 100);
     }
     syncModalHistory();
   }
