@@ -582,7 +582,8 @@ img { display: block; max-width: 100%; }
 /* ======= SECTION HEADER ======= */
 .section-header {
   display: flex;
-  align-items: baseline;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   margin-bottom: 20px;
   scroll-margin-top: 90px;
