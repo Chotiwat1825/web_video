@@ -1,35 +1,4 @@
-﻿/* ===================================================
-/* ======= SEARCH HIGHLIGHT ======= */
-/* Applied by highlightText() to matched query tokens in card titles */
-mark.search-highlight {
-  background: transparent;
-  color: var(--accent-secondary);
-  font-weight: 700;
-  text-decoration: underline;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 2px;
-}
-
-/* Empty state clear search button */
-.btn-empty-clear {
-  margin-top: 16px;
-  padding: 10px 28px;
-  background: var(--gradient-accent);
-  border-radius: 99px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  transition: var(--transition);
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(229,9,20,0.3);
-}
-.btn-empty-clear:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(229,9,20,0.45);
-}
-
+/* ===================================================
    PlayIDTV — Premium Dark Streaming UI
    =================================================== */
 

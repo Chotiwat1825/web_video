@@ -1,4 +1,4 @@
-﻿/* ===================================================
+/* ===================================================
    PlayIDTV — App Logic (Enhanced Edition)
    =================================================== */
 
@@ -638,10 +638,11 @@ function onTouchEnd(e) {
     const now = Date.now();
     const zone = gs.touch.zone;
     const dt = now - gs.lastTap.time;
-    if (dt < 320 && gs.lastTap.zone === zone && zone !== 'center') {
+    if (dt < 320 && gs.lastTap.zone === zone) {
       // Double-tap
-      if (zone === 'left')  doSkip(-5, 'left');
-      if (zone === 'right') doSkip(5, 'right');
+      if (zone === 'left')   doSkip(-10, 'left');
+      if (zone === 'right')  doSkip(10, 'right');
+      if (zone === 'center') toggleFullscreen();
       gs.lastTap.time = 0; // reset so next tap is fresh
     } else {
       gs.lastTap = { time: now, zone };
@@ -771,14 +772,23 @@ function showSwipeIndicator(value, iconHtml, side, label) {
 }
 
 // ── Speed control ─────────────────────────────────────
-function cycleSpeed() {
-  gs.speedIdx = (gs.speedIdx + 1) % gs.speedSteps.length;
-  const spd = gs.speedSteps[gs.speedIdx];
-  DOM.videoPlayer.playbackRate = spd;
-  const lbl = spd === 1 ? '1×' : spd + '×';
+function setPlaybackSpeed(speed) {
+  const idx = gs.speedSteps.indexOf(speed);
+  if (idx !== -1) gs.speedIdx = idx;
+  DOM.videoPlayer.playbackRate = speed;
+  const lbl = speed === 1 ? '1×' : speed + '×';
   const speedLabel = $('speed-label');
   if (speedLabel) speedLabel.textContent = lbl;
+  // Update menu active state
+  document.querySelectorAll('.speed-menu-item').forEach(el => {
+    el.classList.toggle('active', parseFloat(el.dataset.speed) === speed);
+  });
   showToast(`<span>ความเร็ว: ${lbl}</span>`);
+}
+
+function cycleSpeed() {
+  gs.speedIdx = (gs.speedIdx + 1) % gs.speedSteps.length;
+  setPlaybackSpeed(gs.speedSteps[gs.speedIdx]);
 }
 
 // ── Lock screen ───────────────────────────────────────
@@ -1230,6 +1240,7 @@ function renderSkeletons(count) {
 }
 
 // ── Video Player Modal ─────────────────────────────────
+let _playerControlsInited = false;
 function openModal(video, idx) {
   state.currentVideo = video;
   state.currentIndex = idx >= 0 ? idx : state.filteredVideos.indexOf(video);
@@ -1258,6 +1269,12 @@ function openModal(video, idx) {
   DOM.modalOverlay.classList.add('open');
   document.body.classList.add('modal-open');
   document.body.style.overflow = 'hidden';
+
+  // Initialize player controls only once
+  if (!_playerControlsInited) {
+    _playerControlsInited = true;
+    initPlayerControls();
+  }
 }
 
 function playStream(url) {
