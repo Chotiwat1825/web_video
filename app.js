@@ -1212,6 +1212,7 @@ function setActiveGroup(group) {
 
 // ── Apply Query and Filters ───────────────────────────
 function applyFilter() {
+  stopHoverPreview();
   let videos;
   if (state.showFavorites) {
     videos = getFavorites();
@@ -1339,7 +1340,47 @@ function createVideoCard(video, idx) {
     });
   }
 
-  card.addEventListener('click', () => openModal(video, idx));
+  // Attach hover listeners for Lumierecore video previews (e.g. Heedeng and Lovehee)
+  const isLumiere = getLumiereId(video.url) !== null;
+  if (isLumiere) {
+    let touchTimer;
+    
+    // Desktop hover events
+    card.addEventListener('mouseenter', () => {
+      startHoverPreview(card, video.url);
+    });
+    card.addEventListener('mouseleave', () => {
+      stopHoverPreview();
+    });
+    
+    // Mobile touch events (Long Press)
+    card.addEventListener('touchstart', (e) => {
+      card.dataset.wasLongPress = 'false';
+      touchTimer = setTimeout(() => {
+        card.dataset.wasLongPress = 'true';
+      }, 400); // 400ms threshold to count as long press
+      startHoverPreview(card, video.url);
+    }, { passive: true });
+    
+    const handleTouchEnd = () => {
+      clearTimeout(touchTimer);
+      stopHoverPreview();
+    };
+    
+    card.addEventListener('touchend', handleTouchEnd, { passive: true });
+    card.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    card.addEventListener('touchmove', handleTouchEnd, { passive: true });
+  }
+
+  card.addEventListener('click', (e) => {
+    // If the user was long-pressing on mobile, prevent the normal click from opening the modal
+    if (card.dataset.wasLongPress === 'true') {
+      e.preventDefault();
+      card.dataset.wasLongPress = 'false';
+      return;
+    }
+    openModal(video, idx);
+  });
   return card;
 }
 
@@ -1426,6 +1467,7 @@ function renderSkeletons(count) {
 let _playerControlsInited = false;
 let lastHistorySaveTime = 0;
 function openModal(video, idx) {
+  stopHoverPreview();
   state.currentVideo = video;
   state.currentIndex = idx >= 0 ? idx : state.filteredVideos.indexOf(video);
 
@@ -1753,6 +1795,126 @@ function renderRelated(current) {
       <div class="related-title">${escHtml(v.name)}</div>
     </div>
   `).join('');
+}
+
+// ── Hover Card Video Previews ──────────────────────────
+let activeHoverPreview = {
+  card: null,
+  timer: null,
+  hls: null,
+  videoEl: null
+};
+
+function getLumiereId(url) {
+  if (!url) return null;
+  const match = url.match(/lumierecore\.com\/([a-zA-Z0-9\-]+)/);
+  return match ? match[1] : null;
+}
+
+function getProxiedUrl(url) {
+  if (!url || !url.startsWith('http')) return url;
+  if (url.startsWith(window.location.origin)) return url;
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const proxyBase = isLocal ? window.location.origin : 'https://web-video-9un8.onrender.com';
+  return `${proxyBase}/proxy?url=${encodeURIComponent(url)}`;
+}
+
+function startHoverPreview(card, videoUrl) {
+  // Clear any existing preview first
+  stopHoverPreview();
+
+  const videoId = getLumiereId(videoUrl);
+  if (!videoId) return;
+
+  activeHoverPreview.card = card;
+  activeHoverPreview.timer = setTimeout(() => {
+    const thumb = card.querySelector('.card-thumb');
+    if (!thumb) return;
+
+    // Construct preview video element
+    const videoEl = document.createElement('video');
+    videoEl.className = 'card-preview-video';
+    videoEl.muted = true;
+    videoEl.loop = true;
+    videoEl.playsInline = true;
+    videoEl.autoplay = true;
+    
+    // Add to thumb container
+    thumb.appendChild(videoEl);
+    activeHoverPreview.videoEl = videoEl;
+
+    // Use 360p low-res stream for fast preview
+    // Append unique cache-busting timestamp to bypass browser's cached corrupt responses
+    const streamUrl = `https://lumierecore.com/media/${videoId}/${videoId}_360p.m3u8?t=${Date.now()}`;
+    const proxiedUrl = getProxiedUrl(streamUrl);
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        maxMaxBufferLength: 5,
+        enableWorker: true
+      });
+      activeHoverPreview.hls = hls;
+      hls.loadSource(proxiedUrl);
+      hls.attachMedia(videoEl);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        videoEl.play()
+          .then(() => {
+            videoEl.classList.add('loaded');
+            card.classList.add('preview-active');
+          })
+          .catch(err => console.warn('Preview autoplay blocked:', err));
+      });
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          console.warn('Hls error during preview:', data);
+          if (data.details === 'manifestParsingError' && data.networkDetails && data.networkDetails.response) {
+            console.log('--- Preview Response Sample ---');
+            console.log(data.networkDetails.response.slice(0, 500));
+            console.log('-------------------------------');
+          }
+          stopHoverPreview();
+        }
+      });
+    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native Apple HLS (Safari)
+      videoEl.src = proxiedUrl;
+      const playHandler = () => {
+        videoEl.play()
+          .then(() => {
+            videoEl.classList.add('loaded');
+            card.classList.add('preview-active');
+          })
+          .catch(err => console.warn('Preview autoplay blocked:', err));
+        videoEl.removeEventListener('loadedmetadata', playHandler);
+      };
+      videoEl.addEventListener('loadedmetadata', playHandler);
+    }
+  }, 500); // 500ms delay to prevent cursor-sweeping overhead
+}
+
+function stopHoverPreview() {
+  if (activeHoverPreview.timer) {
+    clearTimeout(activeHoverPreview.timer);
+    activeHoverPreview.timer = null;
+  }
+
+  if (activeHoverPreview.hls) {
+    activeHoverPreview.hls.destroy();
+    activeHoverPreview.hls = null;
+  }
+
+  if (activeHoverPreview.videoEl) {
+    activeHoverPreview.videoEl.pause();
+    activeHoverPreview.videoEl.removeAttribute('src');
+    activeHoverPreview.videoEl.load();
+    activeHoverPreview.videoEl.remove();
+    activeHoverPreview.videoEl = null;
+  }
+
+  if (activeHoverPreview.card) {
+    activeHoverPreview.card.classList.remove('preview-active');
+    activeHoverPreview.card = null;
+  }
 }
 
 // ── Favorites Core Logic ───────────────────────────────

@@ -3,6 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const urlModule = require('url');
+const zlib = require('zlib');
 
 const PORT = 3000;
 const PUBLIC_DIR = __dirname;
@@ -192,7 +193,7 @@ const server = http.createServer((req, res) => {
     if (req.headers['user-agent']) headers['User-Agent'] = req.headers['user-agent'];
     if (req.headers['range']) headers['Range'] = req.headers['range'];
     if (req.headers['accept']) headers['Accept'] = req.headers['accept'];
-    if (req.headers['accept-encoding']) headers['Accept-Encoding'] = req.headers['accept-encoding'];
+    headers['Accept-Encoding'] = 'identity'; // Force uncompressed response to bypass any zlib issues
     if (req.headers['accept-language']) headers['Accept-Language'] = req.headers['accept-language'];
 
     const agent = parsedTarget.protocol === 'https:' ? new https.Agent({ rejectUnauthorized: false }) : null;
@@ -213,6 +214,9 @@ const server = http.createServer((req, res) => {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       };
       if (targetRes.headers['content-type']) resHeaders['Content-Type'] = targetRes.headers['content-type'];
       if (targetRes.headers['content-length']) resHeaders['Content-Length'] = targetRes.headers['content-length'];
@@ -223,8 +227,16 @@ const server = http.createServer((req, res) => {
 
       if (isM3u8) {
         let body = '';
-        targetRes.on('data', chunk => body += chunk);
-        targetRes.on('end', () => {
+        let stream = targetRes;
+        const enc = (targetRes.headers['content-encoding'] || '').toLowerCase();
+        if (enc.includes('gzip') || enc.includes('deflate')) {
+          stream = targetRes.pipe(zlib.createUnzip());
+        } else if (enc.includes('br')) {
+          stream = targetRes.pipe(zlib.createBrotliDecompress());
+        }
+
+        stream.on('data', chunk => body += chunk);
+        stream.on('end', () => {
           const proto = req.headers['x-forwarded-proto'] || 'http';
           const host = req.headers.host;
           const proxyPrefix = `${proto}://${host}/proxy?url=`;
@@ -245,6 +257,11 @@ const server = http.createServer((req, res) => {
           resHeaders['Content-Length'] = Buffer.byteLength(rewrittenBody);
           res.writeHead(targetRes.statusCode, resHeaders);
           res.end(rewrittenBody);
+        });
+        stream.on('error', (err) => {
+          console.error('[Decompression Error]', err.message, 'for URL:', targetUrl);
+          res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('Decompression error: ' + err.message);
         });
       } else {
         res.writeHead(targetRes.statusCode, resHeaders);

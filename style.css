@@ -677,6 +677,7 @@ img { display: block; max-width: 100%; }
   padding: 2px 8px;
   border-radius: 4px;
   letter-spacing: 0.5px;
+  z-index: 3;
 }
 .card-badge.new {
   background: linear-gradient(135deg, #00c853, #00e676);
@@ -690,6 +691,30 @@ img { display: block; max-width: 100%; }
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px;
+  z-index: 3;
+}
+
+/* Hover Preview Video Style */
+.card-preview-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.card-preview-video.loaded {
+  opacity: 1;
+}
+
+/* Hide play overlay when preview is actively playing */
+.video-card.preview-active .card-play-overlay {
+  opacity: 0 !important;
+  visibility: hidden;
 }
 
 .card-body {
