@@ -15,104 +15,104 @@ function getBeautifulName(parsedName) {
   
   const mappings = {
     "All": {
-      fileName: "av24flix_����Դ��ͷ�����.json",
-      title: "av24flix - ����Դ��ͷ�����"
+      fileName: "av24flix_รวมวิดีโอทั้งหมด.json",
+      title: "av24flix - รวมวิดีโอทั้งหมด"
     },
-    "Asia - ˹ѧ�����": {
-      fileName: "av24flix_˹ѧ�����.json",
-      title: "av24flix - ˹ѧ�����"
+    "Asia - หนังเอเชีย": {
+      fileName: "av24flix_หนังเอเชีย.json",
+      title: "av24flix - หนังเอเชีย"
     },
-    "Japan - ˹ѧ�����": {
-      fileName: "av24flix_˹ѧ�����.json",
-      title: "av24flix - ˹ѧ�����"
+    "Japan - หนังญี่ปุ่น": {
+      fileName: "av24flix_หนังญี่ปุ่น.json",
+      title: "av24flix - หนังญี่ปุ่น"
     },
-    "Thai - ˹ѧ��": {
-      fileName: "av24flix_˹ѧ��.json",
-      title: "av24flix - ˹ѧ��"
+    "Thai - หนังไทย": {
+      fileName: "av24flix_หนังไทย.json",
+      title: "av24flix - หนังไทย"
     },
-    "Western - ˹ѧ����": {
-      fileName: "av24flix_˹ѧ����.json",
-      title: "av24flix - ˹ѧ����"
+    "Western - หนังฝรั่ง": {
+      fileName: "av24flix_หนังฝรั่ง.json",
+      title: "av24flix - หนังฝรั่ง"
     },
     "av24flix": {
-      fileName: "av24flix_������ѡ.json",
-      title: "av24flix - ������ѡ"
+      fileName: "av24flix_เมนูหลัก.json",
+      title: "av24flix - เมนูหลัก"
     },
     "AV UNCENSORED": {
-      fileName: "AV_���ૹ����_jav69xxx.json",
-      title: "AV Uncensored (���ૹ���� - jav69xxx)"
+      fileName: "AV_ไม่เซนเซอร์_jav69xxx.json",
+      title: "AV Uncensored (ไม่เซนเซอร์ - jav69xxx)"
     },
     "EXTINF": {
-      fileName: "AV_�Ѻ��_Samorn_Team.json",
-      title: "AV �Ѻ�� - Samorn Team"
+      fileName: "AV_ซับไทย_Samorn_Team.json",
+      title: "AV ซับไทย - Samorn Team"
     },
     "💖Good for heart💋GEN2": {
-      fileName: "���Ѻ����_Good_for_heart_Gen2.json",
-      title: "���Ѻ���� - Good for heart Gen2"
+      fileName: "ตู้กับข้าว_Good_for_heart_Gen2.json",
+      title: "ตู้กับข้าว - Good for heart Gen2"
     },
-    "H-Anime [�Ѻ��]": {
-      fileName: "��鹡�Թ_H-Anime_�Ѻ��.json",
-      title: "��鹡�Թ - H-Anime �Ѻ��"
+    "H-Anime [ซับไทย]": {
+      fileName: "ตู้นกบิน_H-Anime_ซับไทย.json",
+      title: "ตู้นกบิน - H-Anime ซับไทย"
     },
     "💖JAV💖": {
-      fileName: "����͡_JAV_�͹����.json",
-      title: "����͡ - JAV & Anime"
+      fileName: "ตู้เอก_JAV_แอนิเมะ.json",
+      title: "ตู้เอก - JAV & Anime"
     },
     "💖JAV ALL STARS💖": {
-      fileName: "���AllStars_JAV.json",
-      title: "��� All Stars - JAV"
+      fileName: "ตู้AllStars_JAV.json",
+      title: "ตู้ All Stars - JAV"
     },
     "JAV_ SUBTHAI_2": {
-      fileName: "�����2_JAV_SUBTHAI_2.json",
-      title: "����� 2 - JAV �Ѻ��"
+      fileName: "ตู้ที่2_JAV_SUBTHAI_2.json",
+      title: "ตู้ที่ 2 - JAV ซับไทย"
     },
     "JAV SUBTHAI_3": {
-      fileName: "�����3_JAV_SUBTHAI_3.json",
-      title: "����� 3 - JAV �Ѻ��"
+      fileName: "ตู้ที่3_JAV_SUBTHAI_3.json",
+      title: "ตู้ที่ 3 - JAV ซับไทย"
     },
     "JAV_UNCENSORED": {
-      fileName: "���Uncensored_JAV.json",
-      title: "��� Uncensored - JAV ���ૹ����"
+      fileName: "ตู้Uncensored_JAV.json",
+      title: "ตู้ Uncensored - JAV ไม่เซนเซอร์"
     },
     "JAV_UPDATE_2": {
-      fileName: "JAV_�ѻവ_�ش���2.json",
-      title: "JAV �ѻവ - �ش��� 2"
+      fileName: "JAV_อัปเดต_ชุดที่2.json",
+      title: "JAV อัปเดต - ชุดที่ 2"
     },
     "JAV_UPDATE_3": {
-      fileName: "JAV_�ѻവ_�ش���3.json",
-      title: "JAV �ѻവ - �ش��� 3"
+      fileName: "JAV_อัปเดต_ชุดที่3.json",
+      title: "JAV อัปเดต - ชุดที่ 3"
     },
     "JAV_UPDATE_4": {
-      fileName: "JAV_�ѻവ_�ش���4.json",
-      title: "JAV �ѻവ - �ش��� 4"
+      fileName: "JAV_อัปเดต_ชุดที่4.json",
+      title: "JAV อัปเดต - ชุดที่ 4"
     },
     "JAV_UPDATE_5": {
-      fileName: "JAV_�ѻവ_�ش���5.json",
-      title: "JAV �ѻവ - �ش��� 5"
+      fileName: "JAV_อัปเดต_ชุดที่5.json",
+      title: "JAV อัปเดต - ชุดที่ 5"
     },
     "JAV_UPDATE_6": {
-      fileName: "JAV_�ѻവ_�ش���6.json",
-      title: "JAV �ѻവ - �ش��� 6"
+      fileName: "JAV_อัปเดต_ชุดที่6.json",
+      title: "JAV อัปเดต - ชุดที่ 6"
     },
-    "JAV �Ѿഷ4�.�/66": {
-      fileName: "JAV_�ѻവ_4ʤ66.json",
-      title: "JAV �ѻവ - 4 �.�. 66"
+    "JAV อัพเดท4ส.ค/66": {
+      fileName: "JAV_อัปเดต_4สค66.json",
+      title: "JAV อัปเดต - 4 ส.ค. 66"
     },
     "SEXY": {
-      fileName: "�����_SEXY.json",
-      title: "����� - SEXY"
+      fileName: "ตู้กาแฟ_SEXY.json",
+      title: "ตู้กาแฟ - SEXY"
     },
-    "���ҹҪҵ�": {
-      fileName: "���ҹҪҵ�_International.json",
-      title: "���ҹҪҵ� (International)"
+    "ตู้นานาชาติ": {
+      fileName: "ตู้นานาชาติ_International.json",
+      title: "ตู้นานาชาติ (International)"
     },
-    "���ѹ�آ 🔞": {
-      fileName: "���ѹ�آ_������ѡ.json",
-      title: "���ѹ�آ 🔞 (������ѡ)"
+    "ตู้ปันสุข 🔞": {
+      fileName: "ตู้ปันสุข_เมนูหลัก.json",
+      title: "ตู้ปันสุข 🔞 (เมนูหลัก)"
     },
-    "�÷ ����": {
-      fileName: "����÷����_RATE_R.json",
-      title: "����÷���� (Rate R)"
+    "เรท อาร์": {
+      fileName: "ตู้เรทอาร์_RATE_R.json",
+      title: "ตู้เรทอาร์ (Rate R)"
     }
   };
 
@@ -122,7 +122,7 @@ function getBeautifulName(parsedName) {
 
   // Fallback cleaning
   const clean = name
-    .replace(/[^a-zA-Z0-9�-�_-]/g, '_')
+    .replace(/[^a-zA-Z0-9ก-๙_-]/g, '_')
     .replace(/__+/g, '_')
     .replace(/^_+|_+$/g, '');
   return {
@@ -144,7 +144,7 @@ function parseM3U(text) {
     if (line.startsWith('#EXTINF:')) {
       current = {};
       const grp = line.match(/group-title="([^"]+)"/) || line.match(/group="([^"]+)"/);
-      current.group = grp ? grp[1].trim() : '�����';
+      current.group = grp ? grp[1].trim() : 'ทั่วไป';
 
       const logo = line.match(/tvg-logo="([^"]+)"/) || line.match(/logo="([^"]+)"/);
       current.image = logo ? logo[1].trim() : '';
@@ -153,7 +153,7 @@ function parseM3U(text) {
       if (commaIdx !== -1) {
         current.name = line.substring(commaIdx + 1).trim();
       } else {
-        current.name = '����ժ���';
+        current.name = 'ไม่มีชื่อ';
       }
     } else if (line.startsWith('#')) {
       continue;
@@ -204,7 +204,7 @@ function regexFallbackJSON(text) {
           name: nameMatch[1],
           image: imageMatch ? imageMatch[1] : '',
           url: urlStr,
-          group: groupMatch ? groupMatch[1] : '�����',
+          group: groupMatch ? groupMatch[1] : 'ทั่วไป',
           code: extractCode(nameMatch[1])
         });
       }
@@ -247,7 +247,7 @@ function parseJSON(text) {
   let groups = parsed.groups || [];
 
   if (!groups.length && parsed.stations && Array.isArray(parsed.stations)) {
-    groups = [{ name: '�Դ��ͷ�����', stations: parsed.stations }];
+    groups = [{ name: 'วิดีโอทั้งหมด', stations: parsed.stations }];
   }
 
   const hasNestedStations = groups.some(g => g.stations && Array.isArray(g.stations));
@@ -258,13 +258,13 @@ function parseJSON(text) {
       url: g.url,
       code: extractCode(g.name)
     }));
-    groups = [{ name: '�Դ��ͷ�����', stations: stations }];
+    groups = [{ name: 'วิดีโอทั้งหมด', stations: stations }];
   }
 
   return groups.map(g => ({
-    name: g.name || '�����',
+    name: g.name || 'ทั่วไป',
     stations: (g.stations || []).map(s => ({
-      name: s.name || '����ժ���',
+      name: s.name || 'ไม่มีชื่อ',
       image: s.image || '',
       url: s.url || '',
       code: s.code || extractCode(s.name)
