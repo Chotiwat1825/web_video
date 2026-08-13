@@ -1571,26 +1571,88 @@ mark.search-highlight {
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 24px;
+  align-items: center;
 }
 .btn-modal-action {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 9px 18px;
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
   transition: var(--transition);
   font-family: inherit;
+  cursor: pointer;
+  user-select: none;
 }
-.btn-modal-action:hover {
-  background: var(--bg-glass-hover);
+
+/* PRIMARY HIGHLIGHT: Next Button (ถัดไป) */
+#btn-next.btn-modal-action {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 20px;
+  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.35);
+}
+#btn-next.btn-modal-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(229, 9, 20, 0.5);
+  filter: brightness(1.1);
+  color: #fff;
+}
+#btn-next.btn-modal-action:active {
+  transform: translateY(0);
+}
+
+/* SECONDARY NAV: Prev Button (ก่อนหน้า) */
+#btn-prev.btn-modal-action {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--text-primary);
-  border-color: var(--accent-primary);
 }
+#btn-prev.btn-modal-action:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+#btn-prev.btn-modal-action:active {
+  transform: translateY(0);
+}
+
+/* FAVORITE BUTTON: Custom active pink states */
+#btn-modal-fav.btn-modal-action {
+  border-color: rgba(255, 79, 163, 0.15);
+}
+#btn-modal-fav.btn-modal-action:hover {
+  color: var(--accent-pink);
+  border-color: rgba(255, 79, 163, 0.4);
+  background: rgba(255, 79, 163, 0.04);
+}
+#btn-modal-fav.btn-modal-action.active {
+  background: rgba(255, 79, 163, 0.12);
+  border-color: rgba(255, 79, 163, 0.4);
+  color: var(--accent-pink);
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 79, 163, 0.15);
+}
+#btn-modal-fav.btn-modal-action.active:hover {
+  background: rgba(255, 79, 163, 0.18);
+  border-color: rgba(255, 79, 163, 0.6);
+}
+
+/* UTILITY & CLOSE BUTTONS (Back, Copy Link) */
+.btn-modal-action:not(#btn-next):not(#btn-prev):not(#btn-modal-fav):hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
 
 /* Related */
 .related-videos h4 {
