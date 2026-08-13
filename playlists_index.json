@@ -148,10 +148,21 @@
     "type": "json",
     "originalName": "JAV.json",
     "status": "🟢 LOADABLE",
-    "totalVideos": 84,
+    "totalVideos": 29730,
     "health": 100,
     "healthScore": "100%",
-    "workingVideos": 84
+    "workingVideos": 29730
+  },
+  {
+    "name": "JAV",
+    "file": "playlists/JAV_converted.json",
+    "type": "json",
+    "originalName": "JAV_converted.json",
+    "status": "🟢 LOADABLE",
+    "totalVideos": 29900,
+    "health": 100,
+    "healthScore": "100%",
+    "workingVideos": 29900
   },
   {
     "name": "JAV อัพเดท4ส.ค/66",
