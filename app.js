@@ -208,7 +208,11 @@ function setupEventListeners() {
   });
   DOM.videoPlayer.addEventListener('error', () => {
     DOM.playerLoading.classList.remove('show');
-    showToast('⚠️ ไม่สามารถเล่นไฟล์สตรีมมิ่งนี้ได้ หรือลิงก์หมดอายุ');
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      showToast('⚠️ CORS ถูกบล็อกโดย GitHub Pages แนะนำให้เปิดส่วนขยาย "Allow CORS" หรือใช้งานผ่าน localhost:3000');
+    } else {
+      showToast('⚠️ ไม่สามารถเล่นไฟล์สตรีมมิ่งนี้ได้ หรือลิงก์หมดอายุ');
+    }
   });
 
   // Logo resets to "all"
@@ -1303,18 +1307,28 @@ function playStream(url) {
       state.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
         DOM.videoPlayer.play().catch(() => {});
       });
+      let networkErrorCount = 0;
       state.hlsInstance.on(Hls.Events.ERROR, function (event, data) {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              state.hlsInstance.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              state.hlsInstance.recoverMediaError();
-              break;
-            default:
-              break;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          networkErrorCount++;
+          if (networkErrorCount >= 3) {
+            DOM.playerLoading.classList.remove('show');
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+              showToast('⚠️ CORS ถูกบล็อกโดย GitHub Pages แนะนำให้เปิดส่วนขยาย "Allow CORS" หรือใช้งานผ่าน localhost:3000');
+            } else {
+              showToast('⚠️ ไม่สามารถเชื่อมต่อสตรีมมิ่งได้ หรือลิงก์อาจหมดอายุ');
+            }
+            if (state.hlsInstance) {
+              state.hlsInstance.destroy();
+              state.hlsInstance = null;
+            }
+            return;
           }
+          if (data.fatal) {
+            state.hlsInstance.startLoad();
+          }
+        } else if (data.fatal && data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          state.hlsInstance.recoverMediaError();
         }
       });
     } else if (DOM.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
