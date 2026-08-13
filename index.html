@@ -1,0 +1,149 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlayIDTV โ€” เธชเธ•เธฃเธตเธกเธกเธดเนเธเธงเธดเธ”เธตเนเธญ</title>
+  <meta name="description" content="เธ”เธนเธงเธดเธ”เธตเนเธญเธญเธญเธเนเธฅเธเนเธเธฃเธต เธเธธเธ“เธ เธฒเธเธชเธนเธ เธญเธฑเธเน€เธ”เธ—เนเธซเธกเนเธ—เธธเธเธงเธฑเธ" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Embedded HLS.js for .m3u8 streaming links support on all browsers -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== HEADER / NAVBAR ===== -->
+  <header id="site-header">
+    <div class="header-inner">
+      <div class="logo" id="logo-btn">
+        <span class="logo-icon">โ–ถ</span>
+        <span class="logo-text">PlayIDTV</span>
+      </div>
+
+      <nav class="nav-tabs" id="nav-tabs">
+        <!-- dynamically inserted -->
+      </nav>
+
+      <div class="header-actions">
+        <div class="search-wrap">
+          <input type="text" id="search-input" class="search-input" placeholder="เธเนเธเธซเธฒเธงเธดเธ”เธตเนเธญ..." />
+          <span class="search-icon">๐”</span>
+        </div>
+        <button class="btn-source" id="toggle-source-btn" title="เน€เธเธฅเธตเนเธขเธเนเธซเธฅเนเธเธเนเธญเธกเธนเธฅ">
+          <span class="btn-source-icon">๐“</span>
+          <span>เนเธซเธฅเนเธเธเนเธญเธกเธนเธฅ</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HERO / FEATURED COVER ===== -->
+  <section id="hero-section">
+    <div class="hero-bg" id="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content" id="hero-content">
+      <div class="hero-badge">๐”ฅ เนเธเธฐเธเธณ</div>
+      <h1 class="hero-title" id="hero-title">เธเธณเธฅเธฑเธเนเธซเธฅเธ”...</h1>
+      <p class="hero-desc" id="hero-desc">เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธเนเธญเธกเธนเธฅ...</p>
+      <div class="hero-actions">
+        <button class="btn-play" id="hero-play-btn">
+          <span>โ–ถ</span> เน€เธฅเนเธเน€เธฅเธข
+        </button>
+        <button class="btn-info" id="hero-info-btn">
+          <span>โน</span> เธ”เธนเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main id="main-content">
+
+    <!-- Source selector panel -->
+    <div class="source-panel" id="source-panel" style="display:none;">
+      <div class="source-panel-header">
+        <h3>๐“ เน€เธฅเธทเธญเธเนเธซเธฅเนเธเธเนเธญเธกเธนเธฅ</h3>
+        <input type="text" id="source-search" placeholder="เธเนเธเธซเธฒเน€เธเธฅเธขเนเธฅเธดเธชเธ•เน..." class="source-search-input" />
+      </div>
+      <div class="source-list" id="source-list">
+        <!-- dynamically inserted from playlists_index.json -->
+      </div>
+    </div>
+
+    <!-- Group filter chips -->
+    <div class="group-filter" id="group-filter">
+      <div class="filter-scroll" id="filter-scroll">
+        <!-- dynamically inserted -->
+      </div>
+    </div>
+
+    <!-- Video grid -->
+    <div class="section-header">
+      <h2 class="section-title" id="section-title">เธฃเธฒเธขเธเธฒเธฃเธ—เธฑเนเธเธซเธกเธ”</h2>
+      <span class="video-count" id="video-count"></span>
+    </div>
+
+    <div class="video-grid" id="video-grid">
+      <!-- dynamically inserted -->
+    </div>
+
+    <div class="load-more-wrap">
+      <button class="btn-load-more" id="load-more-btn" onclick="loadMore()">เนเธซเธฅเธ”เน€เธเธดเนเธกเน€เธ•เธดเธก โ“</button>
+    </div>
+
+  </main>
+
+  <!-- ===== VIDEO PLAYER MODAL ===== -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-container" id="modal-container">
+      <button class="modal-close" id="modal-close-btn" onclick="closeModal()">โ•</button>
+
+      <!-- Video Player -->
+      <div class="player-wrap">
+        <video
+          id="video-player"
+          controls
+          autoplay
+          playsinline
+          preload="metadata"
+          poster=""
+        ></video>
+        <div class="player-loading" id="player-loading">
+          <div class="spinner"></div>
+          <p>เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธงเธดเธ”เธตเนเธญ...</p>
+        </div>
+      </div>
+
+      <!-- Video Info -->
+      <div class="modal-info">
+        <div class="modal-badge-row">
+          <span class="badge badge-hd">HD</span>
+          <span class="badge badge-free">FREE</span>
+          <span class="modal-group-tag" id="modal-group-tag"></span>
+        </div>
+        <h2 class="modal-title" id="modal-title"></h2>
+        <div class="modal-meta">
+          <span id="modal-meta-code"></span>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-action" id="btn-prev" onclick="navigateVideo(-1)">โฌ… เธเนเธญเธเธซเธเนเธฒ</button>
+          <button class="btn-modal-action" id="btn-next" onclick="navigateVideo(1)">เธ–เธฑเธ”เนเธ โก</button>
+          <button class="btn-modal-action" onclick="copyVideoUrl()">๐”— เธเธฑเธ”เธฅเธญเธเธฅเธดเธเธเน</button>
+        </div>
+        <div class="related-videos" id="related-videos">
+          <h4>เธงเธดเธ”เธตเนเธญเธ—เธตเนเน€เธเธตเนเธขเธงเธเนเธญเธ</h4>
+          <div class="related-grid" id="related-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ===== SCRIPTS ===== -->
+  <script src="app.js"></script>
+</body>
+</html>
