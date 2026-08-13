@@ -1288,10 +1288,14 @@ function playStream(url) {
     state.hlsInstance = null;
   }
 
-  // Wrap external stream URLs with local CORS proxy
+  // Wrap external stream URLs with local or remote CORS proxy
   let playUrl = url;
-  if (url.startsWith('http') && !url.startsWith(window.location.origin)) {
-    playUrl = `${window.location.origin}/proxy?url=${encodeURIComponent(url)}`;
+  if (url.startsWith('http')) {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const proxyBase = isLocal ? window.location.origin : 'https://web-video-9un8.onrender.com';
+    if (!url.startsWith(window.location.origin)) {
+      playUrl = `${proxyBase}/proxy?url=${encodeURIComponent(url)}`;
+    }
   }
 
   const isHls = url.includes('.m3u8') || url.includes('/playlist');
