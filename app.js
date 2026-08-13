@@ -1397,13 +1397,7 @@ function createVideoCard(video, idx) {
       startHoverPreview(card, video.url, true);
     }, { passive: true });
     
-    const handleTouchEnd = () => {
-      clearTimeout(touchTimer);
-      stopHoverPreview();
-    };
-    
-    card.addEventListener('touchend', handleTouchEnd, { passive: true });
-    card.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    // Preview keeps playing after touch ends. It will stop when a new preview starts (or modal opens).
   }
 
   card.addEventListener('click', (e) => {
