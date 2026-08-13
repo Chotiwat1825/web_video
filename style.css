@@ -667,7 +667,9 @@ img { display: block; max-width: 100%; }
   transform: scale(0.8);
   transition: var(--transition);
 }
-.video-card:hover .card-play-btn { transform: scale(1); }
+@media (hover: hover) {
+  .video-card:hover .card-play-btn { transform: scale(1); }
+}
 .card-badge {
   position: absolute;
   top: 8px; left: 8px;

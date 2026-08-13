@@ -1404,7 +1404,6 @@ function createVideoCard(video, idx) {
     
     card.addEventListener('touchend', handleTouchEnd, { passive: true });
     card.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-    card.addEventListener('touchmove', handleTouchEnd, { passive: true });
   }
 
   card.addEventListener('click', (e) => {
