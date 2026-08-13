@@ -19,6 +19,45 @@ let state = {
   heroInterval:   null,
   hlsInstance:    null,   // HLS.js player instance
   lastScrollY:    0,      // last scroll position before modal opens
+  modalHistoryActive: false, // tracks if a modal/overlay history state has been pushed
+}
+
+// ── Browser History / Modal Sync ──────────────────────
+function areAnyModalsOpen() {
+  const videoModalOpen = DOM.modalOverlay && DOM.modalOverlay.classList.contains('open');
+  const sourceModalOpen = DOM.sourcePanel && DOM.sourcePanel.classList.contains('open');
+  const tabDrawer = document.getElementById('tab-categories-drawer');
+  const tabDrawerOpen = tabDrawer && tabDrawer.classList.contains('open');
+  const tabSearch = document.getElementById('tab-search-panel');
+  const tabSearchOpen = tabSearch && tabSearch.classList.contains('open');
+  return !!(videoModalOpen || sourceModalOpen || tabDrawerOpen || tabSearchOpen);
+}
+
+let _syncHistoryTimeout = null;
+function syncModalHistory() {
+  if (_syncHistoryTimeout) clearTimeout(_syncHistoryTimeout);
+  _syncHistoryTimeout = setTimeout(() => {
+    const open = areAnyModalsOpen();
+    if (open && !state.modalHistoryActive) {
+      state.modalHistoryActive = true;
+      history.pushState({ modalActive: true }, '');
+    } else if (!open && state.modalHistoryActive) {
+      state.modalHistoryActive = false;
+      history.back();
+    }
+  }, 50);
+}
+
+function setIframeSource(url) {
+  const oldIframe = DOM.iframePlayer;
+  if (!oldIframe) return;
+  const parent = oldIframe.parentNode;
+  if (!parent) return;
+  
+  const newIframe = oldIframe.cloneNode(true);
+  newIframe.src = url;
+  parent.replaceChild(newIframe, oldIframe);
+  DOM.iframePlayer = newIframe;
 }
 
 function openSourceModal() {
@@ -32,6 +71,7 @@ function openSourceModal() {
       renderPlaylists();
       setTimeout(() => search.focus(), 100);
     }
+    syncModalHistory();
   }
 }
 
@@ -44,6 +84,7 @@ function closeSourceModal(e) {
     if (!DOM.modalOverlay.classList.contains('open')) {
       document.body.style.overflow = '';
     }
+    syncModalHistory();
   }
 };
 
@@ -221,6 +262,19 @@ function setupEventListeners() {
   // Logo resets to "all"
   $('logo-btn').addEventListener('click', () => {
     setActiveGroup('all');
+  });
+
+  // Handle browser back button / swipe gestures to close open modals
+  window.addEventListener('popstate', () => {
+    state.modalHistoryActive = false;
+    
+    if (DOM.modalOverlay && DOM.modalOverlay.classList.contains('open')) {
+      closeModal();
+    }
+    if (DOM.sourcePanel && DOM.sourcePanel.classList.contains('open')) {
+      closeSourceModal();
+    }
+    closeTabOverlays();
   });
 }
 
@@ -1285,6 +1339,7 @@ function openModal(video, idx) {
     _playerControlsInited = true;
     initPlayerControls();
   }
+  syncModalHistory();
 }
 
 function isEmbedUrl(url) {
@@ -1302,12 +1357,12 @@ function playStream(url) {
   // Toggle Embed/Iframe Mode vs Video tag mode
   if (isEmbedUrl(url)) {
     DOM.playerWrap.classList.add('embed-mode');
-    DOM.iframePlayer.src = url;
+    setIframeSource(url);
     DOM.playerLoading.classList.remove('show');
     return;
   } else {
     DOM.playerWrap.classList.remove('embed-mode');
-    DOM.iframePlayer.src = 'about:blank';
+    setIframeSource('about:blank');
   }
 
   // Wrap external stream URLs with local or remote CORS proxy
@@ -1389,7 +1444,7 @@ function closeModal(e) {
   DOM.videoPlayer.load();
   
   // Clear iframe to prevent playing in background
-  DOM.iframePlayer.src = 'about:blank';
+  setIframeSource('about:blank');
   DOM.playerWrap.classList.remove('embed-mode');
   
   document.body.style.overflow = '';
@@ -1413,6 +1468,7 @@ function closeModal(e) {
     if (iconLock)   iconLock.style.display   = 'none';
     if (iconUnlock) iconUnlock.style.display = '';
   }
+  syncModalHistory();
 }
 
 function navigateVideo(dir) {
@@ -1422,15 +1478,49 @@ function navigateVideo(dir) {
 }
 
 function renderRelated(current) {
-  const pool = state.filteredVideos
-    .filter((v) => v !== current && v.group === current.group)
-    .slice(0, 8);
+  // Get all potential related videos in the same category/group, excluding the current one
+  const candidates = state.filteredVideos.filter((v) => v !== current && v.group === current.group);
 
-  if (!pool.length) {
+  if (!candidates.length) {
     $('related-videos').style.display = 'none';
     return;
   }
   $('related-videos').style.display = 'block';
+
+  // Smart scoring system for related videos
+  const currentTokens = current.name.toLowerCase()
+    .split(/[\s\-_\.\(\)\[\]\/\+,]+/)
+    .filter(t => t.length >= 3);
+  
+  const currentIndex = state.filteredVideos.indexOf(current);
+
+  const scored = candidates.map(v => {
+    let score = 0;
+    const vNameLower = v.name.toLowerCase();
+
+    // 1. Keyword overlap (substring matching to handle Thai/English without spaces)
+    currentTokens.forEach(token => {
+      if (vNameLower.includes(token)) {
+        score += 10;
+      }
+    });
+
+    // 2. Proximity boost (adjacent videos in the original list usually represent related episodes)
+    const vIndex = state.filteredVideos.indexOf(v);
+    const distance = Math.abs(vIndex - currentIndex);
+    if (distance <= 5) {
+      score += (6 - distance); // Boost from +1 to +5
+    }
+
+    // 3. Subtle random factor (+0 to +2) to provide variety and prevent static lists
+    score += Math.random() * 2;
+
+    return { video: v, score };
+  });
+
+  // Sort candidates by score descending and pick the top 8
+  scored.sort((a, b) => b.score - a.score);
+  const pool = scored.slice(0, 8).map(item => item.video);
 
   DOM.relatedGrid.innerHTML = pool.map((v, i) => `
     <div class="related-card" onclick="openModal(state.filteredVideos[${state.filteredVideos.indexOf(v)}], ${state.filteredVideos.indexOf(v)})">
@@ -1741,6 +1831,7 @@ function closeTabOverlays() {
   if (drawer)   drawer.classList.remove('open');
   if (panel)    panel.classList.remove('open');
   if (backdrop) backdrop.classList.remove('open');
+  syncModalHistory();
 }
 
 /** Set active tab item visually */
@@ -1818,4 +1909,5 @@ function switchTab(tabId) {
     default:
       break;
   }
+  syncModalHistory();
 }
