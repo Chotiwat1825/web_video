@@ -211,6 +211,41 @@ function setupEventListeners() {
     if (bar) bar.style.width = scrolled + '%';
   });
 
+  // Layout Toggle Logic
+  const btnLayoutList = $('btn-layout-list');
+  const btnLayoutGrid = $('btn-layout-grid');
+  
+  function applyLayoutPreference(layout) {
+    if (!DOM.videoGrid) return;
+    if (layout === 'grid') {
+      DOM.videoGrid.classList.remove('layout-list');
+      if (btnLayoutGrid) btnLayoutGrid.classList.add('active');
+      if (btnLayoutList) btnLayoutList.classList.remove('active');
+    } else {
+      // 'list' is default (1x1)
+      DOM.videoGrid.classList.add('layout-list');
+      if (btnLayoutList) btnLayoutList.classList.add('active');
+      if (btnLayoutGrid) btnLayoutGrid.classList.remove('active');
+    }
+  }
+
+  // Load saved preference or default to 'list'
+  const savedLayout = localStorage.getItem('layout-preference') || 'list';
+  applyLayoutPreference(savedLayout);
+
+  if (btnLayoutList) {
+    btnLayoutList.addEventListener('click', () => {
+      localStorage.setItem('layout-preference', 'list');
+      applyLayoutPreference('list');
+    });
+  }
+  if (btnLayoutGrid) {
+    btnLayoutGrid.addEventListener('click', () => {
+      localStorage.setItem('layout-preference', 'grid');
+      applyLayoutPreference('grid');
+    });
+  }
+
   // Search videos — with debounce
   const debouncedSearch = debounce((value) => {
     state.searchQuery = value.trim().toLowerCase();
@@ -1353,13 +1388,13 @@ function createVideoCard(video, idx) {
       stopHoverPreview();
     });
     
-    // Mobile touch events (Long Press)
+    // Mobile touch events (Touch to Play)
     card.addEventListener('touchstart', (e) => {
       card.dataset.wasLongPress = 'false';
       touchTimer = setTimeout(() => {
         card.dataset.wasLongPress = 'true';
-      }, 400); // 400ms threshold to count as long press
-      startHoverPreview(card, video.url);
+      }, 300); // 300ms threshold to prevent normal click from opening modal if held
+      startHoverPreview(card, video.url, true);
     }, { passive: true });
     
     const handleTouchEnd = () => {
@@ -1819,7 +1854,7 @@ function getProxiedUrl(url) {
   return `${proxyBase}/proxy?url=${encodeURIComponent(url)}`;
 }
 
-function startHoverPreview(card, videoUrl) {
+function startHoverPreview(card, videoUrl, immediate = false) {
   // Clear any existing preview first
   stopHoverPreview();
 
@@ -1827,9 +1862,12 @@ function startHoverPreview(card, videoUrl) {
   if (!videoId) return;
 
   activeHoverPreview.card = card;
-  activeHoverPreview.timer = setTimeout(() => {
+
+  const runPreview = () => {
     const thumb = card.querySelector('.card-thumb');
     if (!thumb) return;
+
+    card.classList.add('preview-loading'); // Show loading line animation
 
     // Construct preview video element
     const videoEl = document.createElement('video');
@@ -1848,6 +1886,12 @@ function startHoverPreview(card, videoUrl) {
     const streamUrl = `https://lumierecore.com/media/${videoId}/${videoId}_360p.m3u8?t=${Date.now()}`;
     const proxiedUrl = getProxiedUrl(streamUrl);
 
+    const onPlaySuccess = () => {
+      videoEl.classList.add('loaded');
+      card.classList.remove('preview-loading');
+      card.classList.add('preview-active');
+    };
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         maxMaxBufferLength: 5,
@@ -1858,11 +1902,11 @@ function startHoverPreview(card, videoUrl) {
       hls.attachMedia(videoEl);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         videoEl.play()
-          .then(() => {
-            videoEl.classList.add('loaded');
-            card.classList.add('preview-active');
-          })
-          .catch(err => console.warn('Preview autoplay blocked:', err));
+          .then(onPlaySuccess)
+          .catch(err => {
+            console.warn('Preview autoplay blocked:', err);
+            card.classList.remove('preview-loading');
+          });
       });
       hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
@@ -1880,16 +1924,22 @@ function startHoverPreview(card, videoUrl) {
       videoEl.src = proxiedUrl;
       const playHandler = () => {
         videoEl.play()
-          .then(() => {
-            videoEl.classList.add('loaded');
-            card.classList.add('preview-active');
-          })
-          .catch(err => console.warn('Preview autoplay blocked:', err));
+          .then(onPlaySuccess)
+          .catch(err => {
+            console.warn('Preview autoplay blocked:', err);
+            card.classList.remove('preview-loading');
+          });
         videoEl.removeEventListener('loadedmetadata', playHandler);
       };
       videoEl.addEventListener('loadedmetadata', playHandler);
     }
-  }, 500); // 500ms delay to prevent cursor-sweeping overhead
+  };
+
+  if (immediate) {
+    runPreview();
+  } else {
+    activeHoverPreview.timer = setTimeout(runPreview, 500); // 500ms delay to prevent cursor-sweeping overhead
+  }
 }
 
 function stopHoverPreview() {
@@ -1912,7 +1962,7 @@ function stopHoverPreview() {
   }
 
   if (activeHoverPreview.card) {
-    activeHoverPreview.card.classList.remove('preview-active');
+    activeHoverPreview.card.classList.remove('preview-active', 'preview-loading');
     activeHoverPreview.card = null;
   }
 }

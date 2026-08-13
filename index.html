@@ -112,8 +112,18 @@
 
     <!-- Video grid -->
     <div class="section-header" tabindex="-1">
-      <h2 class="section-title" id="section-title">รายการทั้งหมด</h2>
-      <span class="video-count" id="video-count"></span>
+      <div style="display: flex; align-items: baseline; gap: 12px;">
+        <h2 class="section-title" id="section-title">รายการทั้งหมด</h2>
+        <span class="video-count" id="video-count"></span>
+      </div>
+      <div class="layout-toggle">
+        <button id="btn-layout-list" class="layout-btn" title="List View (1x1)">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 6h16v4H4zm0 8h16v4H4z"/></svg>
+        </button>
+        <button id="btn-layout-grid" class="layout-btn" title="Grid View">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="video-grid" id="video-grid">
