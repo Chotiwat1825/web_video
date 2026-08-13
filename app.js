@@ -160,16 +160,35 @@ async function initApp() {
   try {
     const resp = await fetch('playlists_index.json');
     if (!resp.ok) throw new Error('Cannot load playlists_index.json');
-    state.playlists = await resp.ok ? await resp.json() : [];
+    state.playlists = await resp.json();
     
     if (state.playlists.length === 0) {
       throw new Error('No playlists found in index');
     }
     
     renderPlaylists();
-    // Load Heedeng by default, otherwise fallback to the first playlist
-    const defaultIdx = state.playlists.findIndex(p => p.file === 'playlists/Heedeng.json');
-    loadPlaylist(defaultIdx !== -1 ? defaultIdx : 0);
+    
+    // PWA: Load saved playlist index from localStorage if available
+    let initialIdx = -1;
+    try {
+      const savedIdx = localStorage.getItem('playidtv_playlist_idx');
+      if (savedIdx !== null) {
+        const parsed = parseInt(savedIdx, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed < state.playlists.length) {
+          initialIdx = parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading saved playlist index:', e);
+    }
+
+    if (initialIdx === -1) {
+      // Fallback to Heedeng or first playlist
+      const defaultIdx = state.playlists.findIndex(p => p.file === 'playlists/Heedeng.json');
+      initialIdx = defaultIdx !== -1 ? defaultIdx : 0;
+    }
+    
+    loadPlaylist(initialIdx);
   } catch (err) {
     console.error('App init error:', err);
     showToast(getIcon('cancel') + ' <span>ไม่สามารถโหลดรายชื่อเพลย์ลิสต์ได้: ' + escHtml(err.message) + '</span>');
@@ -293,8 +312,25 @@ function initPlayerControls() {
   const progressFill  = $('player-progress-fill');
   const progressThumb = $('player-progress-thumb');
   const buffered      = $('player-buffered');
-  const timeEl        = $('player-time');
   const volSlider     = $('player-volume');
+
+  // Load saved volume settings from localStorage
+  try {
+    const savedVol = localStorage.getItem('playidtv_volume');
+    if (savedVol !== null) {
+      video.volume = parseFloat(savedVol);
+      if (volSlider) {
+        volSlider.value = savedVol;
+        volSlider.style.setProperty('--vol', (parseFloat(savedVol) * 100) + '%');
+      }
+    }
+    const savedMuted = localStorage.getItem('playidtv_muted');
+    if (savedMuted !== null) {
+      video.muted = savedMuted === 'true';
+    }
+  } catch (e) {
+    console.warn('Error loading saved volume state:', e);
+  }
 
   // ── Auto-hide controls ──────────────────────────────
   function showControls() {
@@ -522,6 +558,13 @@ function updateVolumeUI() {
   if (volEl) {
     volEl.value = vol;
     volEl.style.setProperty('--vol', (vol * 100) + '%');
+  }
+  // PWA: Save volume settings to localStorage
+  try {
+    localStorage.setItem('playidtv_volume', v.volume);
+    localStorage.setItem('playidtv_muted', v.muted ? 'true' : 'false');
+  } catch (e) {
+    console.warn('Error saving volume state:', e);
   }
 }
 
@@ -974,6 +1017,11 @@ function switchPlaylist(idx) {
 // ── Load & Parse Playlist ────────────────────────────
 async function loadPlaylist(idx) {
   state.playlistIdx = idx;
+  try {
+    localStorage.setItem('playidtv_playlist_idx', idx);
+  } catch (e) {
+    console.warn('Error saving playlist index:', e);
+  }
   const pl = state.playlists[idx];
 
   // Set hero to loading state

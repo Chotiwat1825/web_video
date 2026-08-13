@@ -2,12 +2,42 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- PWA: viewport with safe-area support for iPhone notch / Dynamic Island -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>PlayIDTV — สตรีมมิ่งวิดีโอ</title>
   <meta name="description" content="ดูวิดีโอออนไลน์ฟรี คุณภาพสูง อัพเดทใหม่ทุกวัน" />
+
+  <!-- ===== PWA Manifest ===== -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- ===== PWA: Theme Color ===== -->
+  <meta name="theme-color" content="#0f0f1a" />
+  <meta name="msapplication-navbutton-color" content="#0f0f1a" />
+
+  <!-- ===== iOS / Apple PWA Meta Tags ===== -->
+  <!-- Makes the web app run in full-screen (standalone) mode on iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <!-- Status bar appearance: black-translucent = extends under the status bar (notch) -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <!-- Name shown on the home screen -->
+  <meta name="apple-mobile-web-app-title" content="PlayIDTV" />
+
+  <!-- Apple Touch Icons (different sizes for different devices) -->
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
+
+  <!-- ===== Android / General PWA ===== -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+
+  <!-- ===== Fonts ===== -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
   <!-- Embedded HLS.js for .m3u8 streaming links support on all browsers -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <link rel="stylesheet" href="style.css?v=1.0.5" />
@@ -465,5 +495,114 @@
 
   <!-- ===== SCRIPTS ===== -->
   <script src="app.js?v=1.0.5"></script>
+
+  <!-- ===== iOS "Add to Home Screen" Install Prompt ===== -->
+  <!-- iOS does not support beforeinstallprompt, so we detect manually -->
+  <div class="pwa-install-banner" id="pwa-install-banner" role="dialog" aria-label="ติดตั้งแอป" style="display:none">
+    <div class="pwa-install-inner">
+      <img src="icons/icon-180.png" alt="PlayIDTV" class="pwa-install-icon" />
+      <div class="pwa-install-text">
+        <strong>ติดตั้ง PlayIDTV</strong>
+        <span>แตะ <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align:middle;margin:0 2px"><path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z"/></svg> แล้วเลือก "เพิ่มในหน้าจอโฮม"</span>
+      </div>
+      <button class="pwa-install-close" id="pwa-install-close" aria-label="ปิด">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <!-- Arrow pointing to share button -->
+    <div class="pwa-install-arrow"></div>
+  </div>
+
+  <!-- ===== PWA: Service Worker Registration ===== -->
+  <script>
+    (function() {
+      // ── Service Worker Registration ──────────────────────
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('./sw.js', { scope: './' })
+            .then(function(reg) {
+              console.log('[PWA] Service Worker registered, scope:', reg.scope);
+
+              // Check for updates periodically
+              reg.addEventListener('updatefound', function() {
+                const newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', function() {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New SW available — show update toast
+                    if (typeof showToast === 'function') {
+                      showToast('🔄 <span>มีอัพเดทใหม่ กรุณารีเฟรชหน้า</span>');
+                    }
+                    // Auto-activate new SW
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
+            })
+            .catch(function(err) {
+              console.warn('[PWA] Service Worker registration failed:', err);
+            });
+
+          // Reload page when new SW takes over
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', function() {
+            if (!refreshing) {
+              refreshing = true;
+              window.location.reload();
+            }
+          });
+        });
+      }
+
+      // ── iOS "Add to Home Screen" Prompt ─────────────────
+      const INSTALL_DISMISSED_KEY = 'playidtv_install_dismissed';
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
+        || navigator.standalone === true;
+      const isDismissed = localStorage.getItem(INSTALL_DISMISSED_KEY) === '1';
+
+      if (isIOS && !isInStandaloneMode && !isDismissed) {
+        // Show banner after 3 seconds delay
+        setTimeout(function() {
+          const banner = document.getElementById('pwa-install-banner');
+          if (banner) {
+            banner.style.display = '';
+            // animate in
+            requestAnimationFrame(function() {
+              banner.classList.add('show');
+            });
+          }
+        }, 3000);
+      }
+
+      // Dismiss button
+      document.addEventListener('DOMContentLoaded', function() {
+        const closeBtn = document.getElementById('pwa-install-close');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function() {
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) {
+              banner.classList.remove('show');
+              setTimeout(function() { banner.style.display = 'none'; }, 350);
+            }
+            // Remember dismiss for 7 days
+            try { localStorage.setItem(INSTALL_DISMISSED_KEY, '1'); } catch(e) {}
+            setTimeout(function() {
+              try { localStorage.removeItem(INSTALL_DISMISSED_KEY); } catch(e) {}
+            }, 7 * 24 * 60 * 60 * 1000);
+          });
+        }
+      });
+
+      // ── Android: beforeinstallprompt (Chrome) ───────────
+      let deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        // Could show a custom install button here if desired
+      });
+
+    })();
+  </script>
 </body>
 </html>
