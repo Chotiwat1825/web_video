@@ -1284,6 +1284,12 @@ function playStream(url) {
     state.hlsInstance = null;
   }
 
+  // Wrap external stream URLs with local CORS proxy
+  let playUrl = url;
+  if (url.startsWith('http') && !url.startsWith(window.location.origin)) {
+    playUrl = `${window.location.origin}/proxy?url=${encodeURIComponent(url)}`;
+  }
+
   const isHls = url.includes('.m3u8') || url.includes('/playlist');
 
   if (isHls) {
@@ -1292,7 +1298,7 @@ function playStream(url) {
         maxMaxBufferLength: 15,
         enableWorker: true
       });
-      state.hlsInstance.loadSource(url);
+      state.hlsInstance.loadSource(playUrl);
       state.hlsInstance.attachMedia(DOM.videoPlayer);
       state.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
         DOM.videoPlayer.play().catch(() => {});
@@ -1313,7 +1319,7 @@ function playStream(url) {
       });
     } else if (DOM.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
       // Native Apple HLS streaming (Safari / iOS)
-      DOM.videoPlayer.src = url;
+      DOM.videoPlayer.src = playUrl;
       DOM.videoPlayer.load();
       DOM.videoPlayer.play().catch(() => {});
     } else {
@@ -1322,7 +1328,7 @@ function playStream(url) {
     }
   } else {
     // Normal MP4 file playback
-    DOM.videoPlayer.src = url;
+    DOM.videoPlayer.src = playUrl;
     DOM.videoPlayer.load();
     DOM.videoPlayer.play().catch(() => {});
   }

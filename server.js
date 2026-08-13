@@ -1,6 +1,8 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const urlModule = require('url');
 
 const PORT = 3000;
 const PUBLIC_DIR = __dirname;
@@ -154,6 +156,96 @@ const server = http.createServer((req, res) => {
     const indexData = getDynamicIndex();
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify(indexData, null, 2));
+    return;
+  }
+
+  if (reqUrl === '/proxy') {
+    const query = urlModule.parse(req.url, true).query;
+    const targetUrl = query.url;
+    if (!targetUrl) {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Missing url parameter');
+      return;
+    }
+
+    let parsedTarget;
+    try {
+      parsedTarget = new URL(targetUrl);
+    } catch (err) {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Invalid url');
+      return;
+    }
+
+    const client = parsedTarget.protocol === 'https:' ? https : http;
+    const headers = {};
+    if (req.headers['user-agent']) headers['User-Agent'] = req.headers['user-agent'];
+    if (req.headers['range']) headers['Range'] = req.headers['range'];
+    if (req.headers['accept']) headers['Accept'] = req.headers['accept'];
+    if (req.headers['accept-encoding']) headers['Accept-Encoding'] = req.headers['accept-encoding'];
+    if (req.headers['accept-language']) headers['Accept-Language'] = req.headers['accept-language'];
+
+    const agent = parsedTarget.protocol === 'https:' ? new https.Agent({ rejectUnauthorized: false }) : null;
+
+    const targetReq = client.get(targetUrl, { headers, agent }, (targetRes) => {
+      if (targetRes.statusCode >= 300 && targetRes.statusCode < 400 && targetRes.headers.location) {
+        const redirectUrl = new URL(targetRes.headers.location, targetUrl).href;
+        res.writeHead(302, {
+          'Location': `/proxy?url=${encodeURIComponent(redirectUrl)}`,
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end();
+        return;
+      }
+
+      const contentType = targetRes.headers['content-type'] || '';
+      const resHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      };
+      if (targetRes.headers['content-type']) resHeaders['Content-Type'] = targetRes.headers['content-type'];
+      if (targetRes.headers['content-length']) resHeaders['Content-Length'] = targetRes.headers['content-length'];
+      if (targetRes.headers['content-range']) resHeaders['Content-Range'] = targetRes.headers['content-range'];
+      if (targetRes.headers['accept-ranges']) resHeaders['Accept-Ranges'] = targetRes.headers['accept-ranges'];
+
+      const isM3u8 = targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('mpegURL');
+
+      if (isM3u8) {
+        let body = '';
+        targetRes.on('data', chunk => body += chunk);
+        targetRes.on('end', () => {
+          const host = req.headers.host;
+          const proxyPrefix = `http://${host}/proxy?url=`;
+          const lines = body.split(/\r?\n/);
+          const rewrittenLines = lines.map(line => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+              try {
+                const absoluteUrl = new URL(trimmed, targetUrl).href;
+                return proxyPrefix + encodeURIComponent(absoluteUrl);
+              } catch (e) {
+                return line;
+              }
+            }
+            return line;
+          });
+          const rewrittenBody = rewrittenLines.join('\n');
+          resHeaders['Content-Length'] = Buffer.byteLength(rewrittenBody);
+          res.writeHead(targetRes.statusCode, resHeaders);
+          res.end(rewrittenBody);
+        });
+      } else {
+        res.writeHead(targetRes.statusCode, resHeaders);
+        targetRes.pipe(res);
+      }
+    });
+
+    targetReq.on('error', (err) => {
+      console.error('[Proxy Error]', err.message, 'for URL:', targetUrl);
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Proxy error: ' + err.message);
+    });
     return;
   }
 
