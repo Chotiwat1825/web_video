@@ -215,8 +215,9 @@ const server = http.createServer((req, res) => {
         let body = '';
         targetRes.on('data', chunk => body += chunk);
         targetRes.on('end', () => {
+          const proto = req.headers['x-forwarded-proto'] || 'http';
           const host = req.headers.host;
-          const proxyPrefix = `http://${host}/proxy?url=`;
+          const proxyPrefix = `${proto}://${host}/proxy?url=`;
           const lines = body.split(/\r?\n/);
           const rewrittenLines = lines.map(line => {
             const trimmed = line.trim();
