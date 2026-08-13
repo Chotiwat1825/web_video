@@ -628,6 +628,8 @@ function onTouchStart(e) {
   if (gs.locked) return; // ignore when locked
   const t = e.touches[0];
   const zone = e.currentTarget.dataset.zone;
+  const isEmbed = DOM.playerWrap && DOM.playerWrap.classList.contains('embed-mode');
+
   gs.touch = {
     zone,
     startX: t.clientX,
@@ -635,25 +637,32 @@ function onTouchStart(e) {
     curX: t.clientX,
     curY: t.clientY,
     startTime: Date.now(),
-    startVol: DOM.videoPlayer.volume,
+    startVol: isEmbed ? 1 : DOM.videoPlayer.volume,
     startBrightness: gs.brightness,
-    startVideoTime: DOM.videoPlayer.currentTime,
+    startVideoTime: isEmbed ? 0 : DOM.videoPlayer.currentTime,
     moved: false,
+    embedMode: isEmbed,
   };
   gs.gestureType = null;
 
-  // Long-press → 2× speed
-  gs.longPressTimer = setTimeout(() => {
-    if (!gs.touch || gs.touch.moved) return;
-    DOM.videoPlayer.playbackRate = 2;
-    const ol = $('speed-boost-overlay');
-    const lb = $('speed-boost-label');
-    if (ol) { lb.textContent = '2.0×'; ol.classList.add('show'); }
-  }, 600);
+  // Long-press → 2× speed (video mode only)
+  if (!isEmbed) {
+    gs.longPressTimer = setTimeout(() => {
+      if (!gs.touch || gs.touch.moved) return;
+      DOM.videoPlayer.playbackRate = 2;
+      const ol = $('speed-boost-overlay');
+      const lb = $('speed-boost-label');
+      if (ol) { lb.textContent = '2.0×'; ol.classList.add('show'); }
+    }, 600);
+  }
 }
 
 function onTouchMove(e) {
   if (!gs.touch || gs.locked) return;
+
+  // In embed-mode, don't intercept swipe gestures — let iframe handle its own events
+  if (gs.touch.embedMode) return;
+
   e.preventDefault();
   const t = e.touches[0];
   const dx = t.clientX - gs.touch.startX;
@@ -678,20 +687,19 @@ function onTouchMove(e) {
 function onTouchEnd(e) {
   if (!gs.touch) return;
   clearTimeout(gs.longPressTimer);
+  const wasEmbed = gs.touch.embedMode;
 
-  // Stop long-press 2x
-  if (DOM.videoPlayer.playbackRate === 2 && gs.touch.moved === false) {
+  // Stop long-press 2x (video mode only)
+  if (!wasEmbed && DOM.videoPlayer.playbackRate === 2 && gs.touch.moved === false) {
     DOM.videoPlayer.playbackRate = gs.speedSteps[gs.speedIdx];
     const ol = $('speed-boost-overlay');
     if (ol) hideOverlay('speed-boost-overlay', 0);
   }
 
-  // Hide seek scrub overlay
-  if (gs.gestureType === 'seek') {
-    hideOverlay('seek-scrub-overlay', 400);
-  }
-  if (gs.gestureType === 'vol' || gs.gestureType === 'brightness') {
-    hideOverlay('swipe-indicator', 700);
+  // Hide video-only overlays
+  if (!wasEmbed) {
+    if (gs.gestureType === 'seek') hideOverlay('seek-scrub-overlay', 400);
+    if (gs.gestureType === 'vol' || gs.gestureType === 'brightness') hideOverlay('swipe-indicator', 700);
   }
 
   if (!gs.touch.moved) {
@@ -700,16 +708,27 @@ function onTouchEnd(e) {
     const zone = gs.touch.zone;
     const dt = now - gs.lastTap.time;
     if (dt < 320 && gs.lastTap.zone === zone) {
-      // Double-tap
-      if (zone === 'left')   doSkip(-10, 'left');
-      if (zone === 'right')  doSkip(10, 'right');
+      // Double-tap → Fullscreen (works in both embed and video mode)
       if (zone === 'center') toggleFullscreen();
-      gs.lastTap.time = 0; // reset so next tap is fresh
+      // Skip only in video mode
+      if (!wasEmbed) {
+        if (zone === 'left')  doSkip(-10, 'left');
+        if (zone === 'right') doSkip(10, 'right');
+      } else {
+        // In embed mode, double-tap left/right also toggles fullscreen
+        if (zone === 'left' || zone === 'right') toggleFullscreen();
+      }
+      gs.lastTap.time = 0;
     } else {
       gs.lastTap = { time: now, zone };
-      if (zone === 'center') {
+      // Single tap: in video mode center = play/pause; in embed mode, pass through
+      if (!wasEmbed && zone === 'center') {
         togglePlayPause();
         triggerRipple();
+      }
+      // Single tap left/right shows controls (video mode only)
+      if (!wasEmbed && (zone === 'left' || zone === 'right')) {
+        showControls();
       }
     }
   }
@@ -734,6 +753,8 @@ let _mouseStartX = 0;
 let _mouseStartVT = 0;
 function onMouseDown(e) {
   if (gs.locked) return;
+  const isEmbed = DOM.playerWrap && DOM.playerWrap.classList.contains('embed-mode');
+  if (isEmbed) return; // don't intercept mouse drags in embed-mode
   _mouseScrubbing = true;
   _mouseStartX = e.clientX;
   _mouseStartVT = DOM.videoPlayer.currentTime;
@@ -1853,6 +1874,10 @@ function switchTab(tabId) {
   // Close any open overlay first (toggle behavior)
   const drawerOpen = drawer && drawer.classList.contains('open');
   const panelOpen  = panel  && panel.classList.contains('open');
+
+  if (tabId !== 'sources') {
+    closeSourceModal();
+  }
 
   switch (tabId) {
 
