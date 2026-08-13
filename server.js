@@ -1,4 +1,4 @@
-﻿const http = require('http');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
@@ -150,7 +150,18 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`\n๐€ Dynamic Video streaming server running at http://localhost:${PORT}`);
-  console.log(`๐“ Playlists folder: ${PLAYLISTS_DIR}`);
-});
+function startServer(port) {
+  server.listen(port, () => {
+    console.log(`\n🚀 Dynamic Video streaming server running at http://localhost:${port}`);
+    console.log(`📂 Playlists folder: ${PLAYLISTS_DIR}`);
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`Port ${port} is in use. Trying port ${port + 1}...`);
+      startServer(port + 1);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
+}
+
+startServer(PORT);
