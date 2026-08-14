@@ -1008,20 +1008,22 @@ body.in-pseudo-fullscreen {
 /* ── Progress bar ── */
 .player-progress-wrap {
   position: relative;
-  height: 18px;
+  height: 36px;
   display: flex;
   align-items: center;
   padding: 0 16px;
   cursor: pointer;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  touch-action: none;
+  z-index: 5;
 }
 .player-progress-track,
 .player-buffered,
 .player-progress-fill {
   position: absolute;
   left: 16px;
-  height: 4px;
-  border-radius: 2px;
+  height: 5px;
+  border-radius: 3px;
   pointer-events: none;
   transition: height 0.15s ease;
 }
@@ -1036,27 +1038,30 @@ body.in-pseudo-fullscreen {
 }
 .player-progress-fill {
   background: var(--gradient-accent);
-  box-shadow: 0 0 6px rgba(229, 9, 20, 0.5);
+  box-shadow: 0 0 8px rgba(229, 9, 20, 0.6);
   width: 0%;
   z-index: 2;
 }
 .player-progress-thumb {
   position: absolute;
   left: 16px;
-  width: 14px; height: 14px;
+  width: 14px;
+  height: 14px;
   background: #fff;
+  border: 2px solid var(--accent-primary);
   border-radius: 50%;
-  transform: translateX(-50%) scale(0);
+  transform: translateX(-50%) scale(1);
   pointer-events: none;
-  z-index: 2;
-  box-shadow: 0 0 6px rgba(0,0,0,0.5);
-  transition: transform 0.15s ease;
+  z-index: 3;
+  box-shadow: 0 0 6px rgba(0,0,0,0.8), 0 0 8px rgba(229, 9, 20, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   margin-left: 0px;
 }
 .player-progress-wrap:hover .player-progress-thumb,
 .player-progress-wrap:active .player-progress-thumb,
 .player-progress-wrap.scrubbing .player-progress-thumb {
-  transform: translateX(-50%) scale(1.25);
+  transform: translateX(-50%) scale(1.4);
+  box-shadow: 0 0 12px rgba(229, 9, 20, 0.9), 0 2px 8px rgba(0,0,0,0.8);
 }
 .player-progress-wrap:hover .player-progress-track,
 .player-progress-wrap:hover .player-buffered,
@@ -1081,7 +1086,7 @@ body.in-pseudo-fullscreen {
 /* ── Floating Seek Thumbnail Preview Card above seekbar ── */
 .player-preview-card {
   position: absolute;
-  bottom: 28px;
+  bottom: 40px;
   left: 16px;
   transform: translate(-50%, 6px);
   display: flex;
@@ -1094,7 +1099,8 @@ body.in-pseudo-fullscreen {
   z-index: 25;
 }
 .player-progress-wrap:hover .player-preview-card,
-.player-progress-wrap.scrubbing .player-preview-card {
+.player-progress-wrap.scrubbing .player-preview-card,
+.player-preview-card.show {
   opacity: 1;
   visibility: visible;
   transform: translate(-50%, 0);
@@ -1120,11 +1126,12 @@ body.in-pseudo-fullscreen {
 }
 .player-preview-poster {
   z-index: 1;
-  filter: brightness(0.85);
+  filter: brightness(0.9);
   background: #111;
 }
 .player-preview-canvas {
   z-index: 2;
+  transition: opacity 0.15s ease;
 }
 .player-preview-spinner {
   position: absolute;
@@ -1161,8 +1168,8 @@ body.in-pseudo-fullscreen {
 }
 @media (max-width: 640px) {
   .player-preview-media {
-    width: 120px;
-    height: 68px;
+    width: 130px;
+    height: 74px;
   }
 }
 
@@ -1179,7 +1186,8 @@ body.in-pseudo-fullscreen {
   cursor: pointer;
   height: 100%;
   margin: 0;
-  z-index: 3;
+  z-index: 6;
+  touch-action: none;
 }
 
 /* ── Bottom bar ── */
@@ -1351,7 +1359,8 @@ body.in-pseudo-fullscreen {
 /* ======= GESTURE ZONES ======= */
 .gesture-zone {
   position: absolute;
-  top: 0; bottom: 56px; /* leave bottom controls bar */
+  top: 0;
+  bottom: 74px; /* Ample clearance above the bottom progress bar and controls */
   z-index: 2;
   cursor: pointer;
   user-select: none;

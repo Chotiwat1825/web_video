@@ -572,6 +572,7 @@ function initPlayerControls() {
 
   // ── Seekbar Live Preview & Hover UI ─
   const seekWrap = $('player-progress-wrap');
+  const previewCard = $('player-preview-card');
 
   if (seekWrap) {
     const handleSeekHover = (clientX) => {
@@ -579,6 +580,7 @@ function initPlayerControls() {
       const rect = seekWrap.getBoundingClientRect();
       const padding = 16;
       const activeWidth = rect.width - (padding * 2);
+      if (activeWidth <= 0) return;
       
       let mouseX = clientX - rect.left - padding;
       mouseX = Math.max(0, Math.min(activeWidth, mouseX));
@@ -600,7 +602,19 @@ function initPlayerControls() {
       handleSeekHover(e.clientX);
     });
 
+    seekWrap.addEventListener('mouseleave', () => {
+      if (!scrubState.isScrubbing && previewCard) {
+        previewCard.classList.remove('show');
+      }
+    });
+
     seek.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches[0]) {
+        handleSeekHover(e.touches[0].clientX);
+      }
+    }, { passive: true });
+
+    seekWrap.addEventListener('touchmove', (e) => {
       if (e.touches && e.touches[0]) {
         handleSeekHover(e.touches[0].clientX);
       }
@@ -615,7 +629,26 @@ function initPlayerControls() {
       mouseX = Math.max(0, Math.min(activeWidth, mouseX));
       startScrubbing(mouseX / activeWidth, 'seekbar');
     });
+    seekWrap.addEventListener('mousedown', (e) => {
+      const rect = seekWrap.getBoundingClientRect();
+      const padding = 16;
+      const activeWidth = rect.width - (padding * 2);
+      let mouseX = e.clientX - rect.left - padding;
+      mouseX = Math.max(0, Math.min(activeWidth, mouseX));
+      startScrubbing(mouseX / activeWidth, 'seekbar');
+    });
+
     seek.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        const rect = seekWrap.getBoundingClientRect();
+        const padding = 16;
+        const activeWidth = rect.width - (padding * 2);
+        let touchX = e.touches[0].clientX - rect.left - padding;
+        touchX = Math.max(0, Math.min(activeWidth, touchX));
+        startScrubbing(touchX / activeWidth, 'seekbar');
+      }
+    }, { passive: true });
+    seekWrap.addEventListener('touchstart', (e) => {
       if (e.touches && e.touches[0]) {
         const rect = seekWrap.getBoundingClientRect();
         const padding = 16;
@@ -1064,6 +1097,7 @@ function updateScrubTarget(pct) {
     const prevTime = $('player-preview-time');
     if (prevTime) prevTime.textContent = timeStr;
     updatePreviewCardPosition(clampedPct);
+    requestPreviewFrame(scrubState.targetTime);
   }
   
   // 4. Mode: gesture -> Update center scrub overlay
@@ -1072,6 +1106,7 @@ function updateScrubTarget(pct) {
     const barEl = $('seek-scrub-bar');
     if (posEl) posEl.textContent = timeStr + ' / ' + formatTime(v.duration);
     if (barEl) barEl.style.width = (clampedPct * 100).toFixed(1) + '%';
+    requestPreviewFrame(scrubState.targetTime);
   }
 }
 
@@ -1086,6 +1121,8 @@ function endScrubbing() {
 
   const wrap = $('player-progress-wrap');
   if (wrap) wrap.classList.remove('scrubbing');
+  const previewCard = $('player-preview-card');
+  if (previewCard) previewCard.classList.remove('show');
   hideOverlay('seek-scrub-overlay', 400);
 
   if (v && v.duration && isFinite(targetTime)) {
@@ -1108,25 +1145,144 @@ function endScrubbing() {
   startPlaybackWatchdog();
 }
 
-// ── Preview Engine (Poster Thumbnail & Time) ────────────
+// ── Preview Engine (Live Frame Extraction & Poster Thumbnail) ──
+let _previewHls = null;
+let _previewThrottleTimer = null;
+let _lastPreviewSeekTime = -1;
+
 function initPreviewEngine() {
-  // Preview engine uses cached high-resolution poster for zero network lag
+  const prevVideo = $('player-preview-video');
+  if (!prevVideo) return;
+
+  const renderToCanvases = () => {
+    if (!prevVideo.videoWidth || !prevVideo.videoHeight) return;
+
+    const canvas = $('player-preview-canvas');
+    if (canvas) {
+      if (canvas.width !== prevVideo.videoWidth) canvas.width = prevVideo.videoWidth;
+      if (canvas.height !== prevVideo.videoHeight) canvas.height = prevVideo.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        try {
+          ctx.drawImage(prevVideo, 0, 0, canvas.width, canvas.height);
+          canvas.style.opacity = '1';
+        } catch (e) {}
+      }
+    }
+
+    const scrubCanvas = $('seek-scrub-canvas');
+    const scrubOverlay = $('seek-scrub-overlay');
+    if (scrubCanvas && scrubOverlay && scrubOverlay.classList.contains('show')) {
+      if (scrubCanvas.width !== prevVideo.videoWidth) scrubCanvas.width = prevVideo.videoWidth;
+      if (scrubCanvas.height !== prevVideo.videoHeight) scrubCanvas.height = prevVideo.videoHeight;
+      const sCtx = scrubCanvas.getContext('2d');
+      if (sCtx) {
+        try {
+          sCtx.drawImage(prevVideo, 0, 0, scrubCanvas.width, scrubCanvas.height);
+          scrubCanvas.style.opacity = '1';
+        } catch (e) {}
+      }
+    }
+
+    const card = $('player-preview-card');
+    if (card) card.classList.remove('loading');
+  };
+
+  prevVideo.addEventListener('seeked', renderToCanvases);
+  prevVideo.addEventListener('loadeddata', renderToCanvases);
 }
 
 function setupPreviewSource(url, initialHlsUrl) {
+  const prevVideo = $('player-preview-video');
   const posterImg = $('player-preview-poster');
   const scrubPoster = $('seek-scrub-poster');
   const posterSrc = (state.currentVideo && state.currentVideo.image) ? state.currentVideo.image : '';
+
   if (posterImg) posterImg.src = posterSrc;
   if (scrubPoster) scrubPoster.src = posterSrc;
+
+  if (!prevVideo) return;
+
+  if (_previewHls) {
+    _previewHls.destroy();
+    _previewHls = null;
+  }
+
+  if (isEmbedUrl(url)) {
+    prevVideo.removeAttribute('src');
+    return;
+  }
+
+  const isHls = url.includes('.m3u8') || url.includes('/playlist') || url.includes('master.m3u8');
+  if (isHls && Hls.isSupported()) {
+    _previewHls = new Hls({
+      maxBufferLength: 1,
+      maxMaxBufferLength: 2,
+      enableWorker: true,
+      autoStartLoad: true,
+      lowLatencyMode: false,
+    });
+    _previewHls.loadSource(initialHlsUrl);
+    _previewHls.attachMedia(prevVideo);
+    _previewHls.on(Hls.Events.MANIFEST_PARSED, () => {
+      if (_previewHls && _previewHls.levels && _previewHls.levels.length > 0) {
+        _previewHls.currentLevel = 0; // lowest resolution level for thumbnail preview
+      }
+    });
+  } else {
+    prevVideo.src = initialHlsUrl || url;
+    prevVideo.load();
+  }
 }
 
 function cleanupPreviewEngine() {
-  // Cleanup preview UI state
+  if (_previewHls) {
+    _previewHls.destroy();
+    _previewHls = null;
+  }
+  const prevVideo = $('player-preview-video');
+  if (prevVideo) {
+    prevVideo.pause();
+    prevVideo.removeAttribute('src');
+    prevVideo.load();
+  }
+  _lastPreviewSeekTime = -1;
+  clearTimeout(_previewThrottleTimer);
+  _previewThrottleTimer = null;
+
+  const canvas = $('player-preview-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.style.opacity = '0';
+  }
+  const scrubCanvas = $('seek-scrub-canvas');
+  if (scrubCanvas) {
+    const ctx = scrubCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, scrubCanvas.width, scrubCanvas.height);
+    scrubCanvas.style.opacity = '0';
+  }
 }
 
 function requestPreviewFrame(targetTime) {
-  // Handled instantly via poster and live timestamp
+  const card = $('player-preview-card');
+  if (card) card.classList.add('show');
+
+  const prevVideo = $('player-preview-video');
+  if (!prevVideo || !isFinite(targetTime)) return;
+  if (!prevVideo.src && !_previewHls) return;
+
+  if (card) card.classList.add('loading');
+
+  clearTimeout(_previewThrottleTimer);
+  _previewThrottleTimer = setTimeout(() => {
+    if (Math.abs(_lastPreviewSeekTime - targetTime) > 0.3) {
+      _lastPreviewSeekTime = targetTime;
+      try {
+        prevVideo.currentTime = Math.max(0, targetTime);
+      } catch (err) {}
+    }
+  }, 120);
 }
 
 function updatePreviewCardPosition(pct) {
@@ -1210,6 +1366,7 @@ function initGestureControls() {
 // ── Touch handlers ────────────────────────────────────
 function onTouchStart(e) {
   if (gs.locked) return; // ignore when locked
+  if (isPlayerInteractiveElement(e.target)) return;
   const t = e.touches[0];
   const zone = e.currentTarget.dataset.zone || 'center';
   const isEmbed = DOM.playerWrap && DOM.playerWrap.classList.contains('embed-mode');
