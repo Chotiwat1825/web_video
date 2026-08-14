@@ -2043,6 +2043,7 @@ function processData(json) {
           group: gName,
           code:  s.code || extractCode(s.name),
           duration: s.duration || '',
+          is_new: !!s.is_new,
         });
       }
     });
