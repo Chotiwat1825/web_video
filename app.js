@@ -1378,8 +1378,11 @@ function createVideoCard(video, idx) {
   // Attach hover listeners for Lumierecore video previews (e.g. Heedeng and Lovehee)
   const isLumiere = getLumiereId(video.url) !== null;
   if (isLumiere) {
-    let touchTimer;
-    
+    let touchTimer = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isLongPress = false;
+
     // Desktop hover events
     card.addEventListener('mouseenter', () => {
       startHoverPreview(card, video.url);
@@ -1387,28 +1390,67 @@ function createVideoCard(video, idx) {
     card.addEventListener('mouseleave', () => {
       stopHoverPreview();
     });
-    
-    // Mobile touch events (Touch to Play)
-    card.addEventListener('touchstart', (e) => {
-      card.dataset.wasLongPress = 'false';
-      touchTimer = setTimeout(() => {
-        card.dataset.wasLongPress = 'true';
-      }, 300); // 300ms threshold to prevent normal click from opening modal if held
-      startHoverPreview(card, video.url, true);
-    }, { passive: true });
-    
-    // Preview keeps playing after touch ends. It will stop when a new preview starts (or modal opens).
-  }
 
-  card.addEventListener('click', (e) => {
-    // If the user was long-pressing on mobile, prevent the normal click from opening the modal
-    if (card.dataset.wasLongPress === 'true') {
-      e.preventDefault();
-      card.dataset.wasLongPress = 'false';
-      return;
-    }
-    openModal(video, idx);
-  });
+    // Mobile touch events (Long press 500ms to preview)
+    card.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length > 1) return;
+      isLongPress = false;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+
+      touchTimer = setTimeout(() => {
+        isLongPress = true;
+        startHoverPreview(card, video.url, true);
+        if (navigator.vibrate) navigator.vibrate(40);
+      }, 500);
+    }, { passive: true });
+
+    // Cancel preview if finger moves/scrolls
+    card.addEventListener('touchmove', (e) => {
+      if (touchTimer && e.touches && e.touches[0]) {
+        const moveX = Math.abs(e.touches[0].clientX - touchStartX);
+        const moveY = Math.abs(e.touches[0].clientY - touchStartY);
+        if (moveX > 10 || moveY > 10) {
+          clearTimeout(touchTimer);
+          touchTimer = null;
+        }
+      }
+    }, { passive: true });
+
+    // Clear timer on touch release
+    card.addEventListener('touchend', () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+      if (isLongPress) {
+        setTimeout(() => {
+          isLongPress = false;
+        }, 350);
+      }
+    }, { passive: true });
+
+    card.addEventListener('touchcancel', () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+      isLongPress = false;
+    });
+
+    card.addEventListener('click', (e) => {
+      if (isLongPress) {
+        e.preventDefault();
+        return;
+      }
+      stopHoverPreview();
+      openModal(video, idx);
+    });
+  } else {
+    card.addEventListener('click', () => {
+      openModal(video, idx);
+    });
+  }
   return card;
 }
 
