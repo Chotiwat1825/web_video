@@ -1373,16 +1373,14 @@ function createVideoCard(video, idx) {
       e.stopPropagation();
       toggleFavorite(video);
     });
+    favBtn.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    }, { passive: true });
   }
 
-  // Attach hover listeners for Lumierecore video previews (e.g. Heedeng and Lovehee)
+  // Attach hover & touch listeners for Lumierecore video previews (e.g. Heedeng and Lovehee)
   const isLumiere = getLumiereId(video.url) !== null;
   if (isLumiere) {
-    let touchTimer = null;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isLongPress = false;
-
     // Desktop hover events
     card.addEventListener('mouseenter', () => {
       startHoverPreview(card, video.url);
@@ -1391,66 +1389,23 @@ function createVideoCard(video, idx) {
       stopHoverPreview();
     });
 
-    // Mobile touch events (Long press 500ms to preview)
+    // Mobile touch events: Start preview immediately on touch/scroll
     card.addEventListener('touchstart', (e) => {
       if (e.touches && e.touches.length > 1) return;
-      isLongPress = false;
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-
-      touchTimer = setTimeout(() => {
-        isLongPress = true;
-        startHoverPreview(card, video.url, true);
-        if (navigator.vibrate) navigator.vibrate(40);
-      }, 500);
+      // Start preview immediately (cancels any previously playing preview)
+      startHoverPreview(card, video.url, true);
     }, { passive: true });
-
-    // Cancel preview if finger moves/scrolls
-    card.addEventListener('touchmove', (e) => {
-      if (touchTimer && e.touches && e.touches[0]) {
-        const moveX = Math.abs(e.touches[0].clientX - touchStartX);
-        const moveY = Math.abs(e.touches[0].clientY - touchStartY);
-        if (moveX > 10 || moveY > 10) {
-          clearTimeout(touchTimer);
-          touchTimer = null;
-        }
-      }
-    }, { passive: true });
-
-    // Clear timer on touch release
-    card.addEventListener('touchend', () => {
-      if (touchTimer) {
-        clearTimeout(touchTimer);
-        touchTimer = null;
-      }
-      if (isLongPress) {
-        setTimeout(() => {
-          isLongPress = false;
-        }, 350);
-      }
-    }, { passive: true });
-
-    card.addEventListener('touchcancel', () => {
-      if (touchTimer) {
-        clearTimeout(touchTimer);
-        touchTimer = null;
-      }
-      isLongPress = false;
-    });
-
-    card.addEventListener('click', (e) => {
-      if (isLongPress) {
-        e.preventDefault();
-        return;
-      }
-      stopHoverPreview();
-      openModal(video, idx);
-    });
   } else {
-    card.addEventListener('click', () => {
-      openModal(video, idx);
-    });
+    // Touching non-lumiere card stops existing preview
+    card.addEventListener('touchstart', () => {
+      stopHoverPreview();
+    }, { passive: true });
   }
+
+  card.addEventListener('click', () => {
+    stopHoverPreview();
+    openModal(video, idx);
+  });
   return card;
 }
 
@@ -1922,6 +1877,7 @@ function startHoverPreview(card, videoUrl, immediate = false) {
     const proxiedUrl = getProxiedUrl(streamUrl);
 
     const onPlaySuccess = () => {
+      if (!videoEl.isConnected || activeHoverPreview.videoEl !== videoEl) return;
       videoEl.classList.add('loaded');
       card.classList.remove('preview-loading');
       card.classList.add('preview-active');
