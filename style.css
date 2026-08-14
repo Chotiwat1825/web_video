@@ -1086,7 +1086,7 @@ body.in-pseudo-fullscreen {
 /* ── Floating Seek Thumbnail Preview Card above seekbar ── */
 .player-preview-card {
   position: absolute;
-  bottom: 40px;
+  bottom: 42px;
   left: 16px;
   transform: translate(-50%, 6px);
   display: flex;
@@ -1095,15 +1095,20 @@ body.in-pseudo-fullscreen {
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+  transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.15s;
   z-index: 25;
 }
-.player-progress-wrap:hover .player-preview-card,
-.player-progress-wrap.scrubbing .player-preview-card,
 .player-preview-card.show {
   opacity: 1;
   visibility: visible;
   transform: translate(-50%, 0);
+}
+@media (hover: hover) and (pointer: fine) {
+  .player-progress-wrap:hover .player-preview-card {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+  }
 }
 .player-preview-media {
   position: relative;

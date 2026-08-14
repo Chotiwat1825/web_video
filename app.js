@@ -604,7 +604,7 @@ function initPlayerControls() {
 
     seekWrap.addEventListener('mouseleave', () => {
       if (!scrubState.isScrubbing && previewCard) {
-        previewCard.classList.remove('show');
+        previewCard.classList.remove('show', 'loading');
       }
     });
 
@@ -659,9 +659,26 @@ function initPlayerControls() {
       }
     }, { passive: true });
 
-    seekWrap.addEventListener('mouseup', () => endScrubbing());
-    seekWrap.addEventListener('touchend', () => endScrubbing());
-    seekWrap.addEventListener('touchcancel', () => endScrubbing());
+    seek.addEventListener('touchend', () => {
+      endScrubbing();
+      if (previewCard) previewCard.classList.remove('show', 'loading');
+    });
+    seek.addEventListener('touchcancel', () => {
+      endScrubbing();
+      if (previewCard) previewCard.classList.remove('show', 'loading');
+    });
+    seekWrap.addEventListener('touchend', () => {
+      endScrubbing();
+      if (previewCard) previewCard.classList.remove('show', 'loading');
+    });
+    seekWrap.addEventListener('touchcancel', () => {
+      endScrubbing();
+      if (previewCard) previewCard.classList.remove('show', 'loading');
+    });
+    seekWrap.addEventListener('mouseup', () => {
+      endScrubbing();
+      if (previewCard) previewCard.classList.remove('show', 'loading');
+    });
   }
 
   // Global safety release for scrubbing
@@ -1062,8 +1079,15 @@ const scrubState = {
 function startScrubbing(initialPct, mode = 'seekbar') {
   const v = DOM.videoPlayer;
   if (!v || !v.duration || isNaN(v.duration)) return;
+
+  // Prevent re-trigger from duplicate touch events resetting wasPlaying
+  if (scrubState.isScrubbing) {
+    updateScrubTarget(initialPct);
+    return;
+  }
+
   scrubState.isScrubbing = true;
-  scrubState.wasPlaying = !v.paused;
+  scrubState.wasPlaying = !v.paused && !v.ended;
   scrubState.mode = mode;
   v.pause();
   
@@ -1121,9 +1145,13 @@ function endScrubbing() {
 
   const wrap = $('player-progress-wrap');
   if (wrap) wrap.classList.remove('scrubbing');
+  
+  // Guarantee preview card is completely dismissed on release
   const previewCard = $('player-preview-card');
-  if (previewCard) previewCard.classList.remove('show');
-  hideOverlay('seek-scrub-overlay', 400);
+  if (previewCard) {
+    previewCard.classList.remove('show', 'loading');
+  }
+  hideOverlay('seek-scrub-overlay', 100);
 
   if (v && v.duration && isFinite(targetTime)) {
     DOM.playerLoading.classList.add('show');
@@ -1134,13 +1162,15 @@ function endScrubbing() {
     }
   }
 
+  // Resume playback seamlessly if video was playing before dragging
   if (shouldResume && v) {
-    const p = v.play();
-    if (p !== undefined && p !== null) {
-      p.catch((err) => {
-        console.warn('[Player] Resume after scrub pending data:', err);
+    _playPromise = v.play();
+    if (_playPromise !== undefined && _playPromise !== null) {
+      _playPromise.catch((err) => {
+        console.warn('[Player] Resume after scrub caught:', err);
       });
     }
+    updatePlayIcon();
   }
   startPlaybackWatchdog();
 }
