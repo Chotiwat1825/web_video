@@ -205,6 +205,9 @@ const server = http.createServer((req, res) => {
     if (targetUrl.includes('mushroomtrack.com') || targetUrl.includes('maplecache.com') || targetUrl.includes('jable.tv')) {
       headers['Referer'] = 'https://jable.tv/';
       headers['Origin'] = 'https://jable.tv';
+    } else if (targetUrl.includes('ezycdn.com') || targetUrl.includes('cdnstorage-') || targetUrl.includes('cdnstorage')) {
+      headers['Referer'] = 'https://ezycdn.com/';
+      headers['Origin'] = 'https://ezycdn.com';
     }
 
     const agent = parsedTarget.protocol === 'https:' ? new https.Agent({ rejectUnauthorized: false }) : null;
@@ -328,6 +331,8 @@ const server = http.createServer((req, res) => {
                   break;
                 }
               }
+            } else if (buffer.length > 0 && buffer[0] === 0x47) {
+              resHeaders['Content-Type'] = 'video/mp2t';
             }
             resHeaders['Content-Length'] = buffer.length;
             res.writeHead(targetRes.statusCode, resHeaders);

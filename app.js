@@ -2179,9 +2179,9 @@ function playStream(url, startTime = 0) {
   const isHls = url.includes('.m3u8') || url.includes('/playlist') || url.includes('master.m3u8');
 
   if (isHls) {
-    // If local, masteplayers, or mushroomtrack/maplecache, use proxy. On GitHub Pages, try direct first with fallback.
+    // If local, masteplayers, mushroomtrack, or ezycdn/cdnstorage, use proxy. On GitHub Pages, try direct first with fallback.
     const proxiedUrl = getProxiedUrl(url);
-    const initialHlsUrl = (isLocal || url.includes('masteplayers.com') || url.includes('mushroomtrack.com') || url.includes('maplecache.com')) ? proxiedUrl : url;
+    const initialHlsUrl = (isLocal || url.includes('masteplayers.com') || url.includes('mushroomtrack.com') || url.includes('maplecache.com') || url.includes('ezycdn.com') || url.includes('cdnstorage-') || url.includes('cdnstorage')) ? proxiedUrl : url;
 
     // Setup live preview frame extractor
     setupPreviewSource(url, initialHlsUrl);
@@ -2229,17 +2229,18 @@ function playStream(url, startTime = 0) {
 
       state.hlsInstance.on(Hls.Events.ERROR, function (event, data) {
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          networkErrorCount++;
           // Fallback to proxy if direct failed
           if (!triedProxyFallback && data.fatal) {
             triedProxyFallback = true;
+            networkErrorCount = 0;
             console.log('[HLS] Network error on direct URL, falling back to proxy:', proxiedUrl);
             state.hlsInstance.loadSource(proxiedUrl);
             state.hlsInstance.startLoad();
             return;
           }
 
-          if (networkErrorCount >= 3) {
+          networkErrorCount++;
+          if (networkErrorCount >= 4) {
             DOM.playerLoading.classList.remove('show');
             showToast('⚠️ ไม่สามารถเชื่อมต่อสตรีมมิ่งได้ หรือลิงก์อาจหมดอายุ');
             if (state.hlsInstance) {
@@ -2574,7 +2575,7 @@ function startHoverPreview(card, videoUrl, immediate = false) {
     } else {
       // HLS preview
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const proxiedUrl = (isLocal || streamUrl.includes('masteplayers.com') || streamUrl.includes('mushroomtrack.com') || streamUrl.includes('maplecache.com')) ? getProxiedUrl(streamUrl) : streamUrl;
+      const proxiedUrl = (isLocal || streamUrl.includes('masteplayers.com') || streamUrl.includes('mushroomtrack.com') || streamUrl.includes('maplecache.com') || streamUrl.includes('ezycdn.com') || streamUrl.includes('cdnstorage-') || streamUrl.includes('cdnstorage')) ? getProxiedUrl(streamUrl) : streamUrl;
 
       if (Hls.isSupported()) {
         const hls = new Hls({
