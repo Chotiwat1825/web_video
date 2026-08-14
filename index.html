@@ -40,7 +40,7 @@
 
   <!-- Embedded HLS.js for .m3u8 streaming links support on all browsers -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <link rel="stylesheet" href="style.css?v=1.0.14" />
+  <link rel="stylesheet" href="style.css?v=1.0.15" />
 </head>
 <body>
 
@@ -259,6 +259,18 @@
             </div>
 
             <div class="player-right-controls">
+              <!-- Video Quality Selector -->
+              <div class="player-quality-wrap-btn" id="quality-wrap-btn">
+                <button class="player-btn player-btn-quality" id="btn-quality" title="คุณภาพวิดีโอ (Q)">
+                  <span id="quality-label">Auto</span>
+                </button>
+                <div class="player-quality-menu" id="player-quality-menu">
+                  <div class="quality-menu-title">คุณภาพของภาพ</div>
+                  <div id="quality-menu-items">
+                    <button class="quality-menu-item active" data-level="-1">อัตโนมัติ (Auto)</button>
+                  </div>
+                </div>
+              </div>
               <!-- Playback Speed -->
               <div class="player-speed-wrap-btn" id="speed-wrap-btn">
                 <button class="player-btn player-btn-speed" id="btn-speed" title="ความเร็ว (S)">
@@ -504,7 +516,7 @@
   </nav>
 
   <!-- ===== SCRIPTS ===== -->
-  <script src="app.js?v=1.0.14"></script>
+  <script src="app.js?v=1.0.15"></script>
 
   <!-- ===== iOS "Add to Home Screen" Install Prompt ===== -->
   <!-- iOS does not support beforeinstallprompt, so we detect manually -->

@@ -442,9 +442,31 @@ function initPlayerControls() {
     });
   }
 
+  // ── Quality Selector button ─────────────────────────
+  const qualityBtn = $('btn-quality');
+  const qualityMenu = $('player-quality-menu');
+  
+  if (qualityBtn && qualityMenu) {
+    qualityBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      qualityMenu.classList.toggle('show');
+      if (speedMenu) speedMenu.classList.remove('show');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (qualityMenu.classList.contains('show') && !qualityMenu.contains(e.target) && e.target !== qualityBtn) {
+        qualityMenu.classList.remove('show');
+      }
+    });
+  }
+
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 's' && DOM.modalOverlay.classList.contains('open') &&
         !['INPUT','TEXTAREA'].includes(ev.target.tagName)) cycleSpeed();
+    if (ev.key.toLowerCase() === 'q' && DOM.modalOverlay.classList.contains('open') &&
+        !['INPUT','TEXTAREA'].includes(ev.target.tagName)) {
+      if (qualityMenu) qualityMenu.classList.toggle('show');
+    }
   });
 
   // ── Lock Screen button ───────────────────────────────
@@ -985,6 +1007,109 @@ function toggleLockScreen() {
   );
 }
 
+// ── Video Quality control ─────────────────────────────
+function updateQualityMenu(levels = [], currentLevel = -1) {
+  const menuContainer = $('quality-menu-items');
+  if (!menuContainer) return;
+
+  menuContainer.innerHTML = '';
+
+  // Auto option
+  const autoBtn = document.createElement('button');
+  autoBtn.className = `quality-menu-item ${currentLevel === -1 ? 'active' : ''}`;
+  autoBtn.dataset.level = '-1';
+  autoBtn.innerHTML = `<span>อัตโนมัติ (Auto)</span><span class="quality-badge-tag">ABR</span>`;
+  autoBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setVideoQuality(-1);
+    const qMenu = $('player-quality-menu');
+    if (qMenu) qMenu.classList.remove('show');
+  });
+  menuContainer.appendChild(autoBtn);
+
+  // If HLS levels exist, sort descending by height and add
+  if (levels && levels.length > 0) {
+    const sortedLevels = levels.map((lvl, originalIndex) => ({
+      ...lvl,
+      originalIndex,
+      height: lvl.height || (lvl.attrs && lvl.attrs.RESOLUTION ? parseInt(lvl.attrs.RESOLUTION.split('x')[1]) : 0)
+    })).sort((a, b) => b.height - a.height);
+
+    sortedLevels.forEach(lvl => {
+      const btn = document.createElement('button');
+      const isCurrent = currentLevel === lvl.originalIndex;
+      btn.className = `quality-menu-item ${isCurrent ? 'active' : ''}`;
+      btn.dataset.level = lvl.originalIndex;
+
+      let tag = '';
+      if (lvl.height >= 1080) tag = '1080p';
+      else if (lvl.height >= 720) tag = 'HD';
+      else if (lvl.height >= 480) tag = 'SD';
+      else if (lvl.height) tag = `${lvl.height}p`;
+
+      let labelText = lvl.height ? `${lvl.height}p` : `ระดับ ${lvl.originalIndex + 1}`;
+      if (lvl.height >= 1080) labelText += ' Full HD';
+      else if (lvl.height >= 720) labelText += ' HD';
+
+      btn.innerHTML = `<span>${labelText}</span>${tag ? `<span class="quality-badge-tag">${tag}</span>` : ''}`;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setVideoQuality(lvl.originalIndex, lvl.height);
+        const qMenu = $('player-quality-menu');
+        if (qMenu) qMenu.classList.remove('show');
+      });
+      menuContainer.appendChild(btn);
+    });
+  }
+
+  updateQualityLabel(currentLevel, levels);
+}
+
+function updateQualityLabel(currentLevel, levels = []) {
+  const qualityLabel = $('quality-label');
+  if (!qualityLabel) return;
+
+  if (currentLevel === -1) {
+    if (state.hlsInstance && state.hlsInstance.currentLevel !== -1 && state.hlsInstance.levels[state.hlsInstance.currentLevel]) {
+      const activeHeight = state.hlsInstance.levels[state.hlsInstance.currentLevel].height;
+      qualityLabel.textContent = activeHeight ? `Auto (${activeHeight}p)` : 'Auto';
+    } else {
+      qualityLabel.textContent = 'Auto';
+    }
+  } else if (levels && levels[currentLevel]) {
+    const height = levels[currentLevel].height;
+    qualityLabel.textContent = height ? `${height}p` : `L${currentLevel + 1}`;
+  }
+}
+
+function setVideoQuality(levelIndex, height = null) {
+  if (!state.hlsInstance) return;
+
+  state.hlsInstance.currentLevel = levelIndex;
+
+  try {
+    if (levelIndex === -1) {
+      localStorage.setItem('preferred_quality', 'auto');
+      showToast('⚙️ คุณภาพวิดีโอ: อัตโนมัติ (Auto)');
+    } else {
+      const h = height || (state.hlsInstance.levels[levelIndex] ? state.hlsInstance.levels[levelIndex].height : null);
+      if (h) {
+        localStorage.setItem('preferred_quality', h.toString());
+        showToast(`🔒 ล็อกคุณภาพวิดีโอ: ${h}p`);
+      }
+    }
+  } catch (e) {}
+
+  const menuContainer = $('quality-menu-items');
+  if (menuContainer) {
+    menuContainer.querySelectorAll('.quality-menu-item').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.level) === levelIndex);
+    });
+  }
+
+  updateQualityLabel(levelIndex, state.hlsInstance.levels);
+}
+
 
 function renderPlaylists(searchQuery = '') {
   let list = [...state.playlists];
@@ -993,10 +1118,11 @@ function renderPlaylists(searchQuery = '') {
   }
 
   function getPlaylistRank(file) {
-    const f = (file || '').toLowerCase();
+    const f = decodeURIComponent(file || '').toLowerCase();
     if (f.includes('heedeng')) return 1;
     if (f.includes('lovehee')) return 2;
     if (f.includes('homhee')) return 3;
+    if (f.includes('jav_อัปเดต') || f.includes('4_ส_ค_66')) return 4;
     return 99;
   }
 
@@ -1649,6 +1775,30 @@ function playStream(url, startTime = 0) {
           DOM.videoPlayer.currentTime = startTime;
         }
         DOM.videoPlayer.play().catch(() => {});
+
+        // Quality selection setup
+        const levels = state.hlsInstance.levels || [];
+        let preferredLevel = -1;
+        try {
+          const savedPref = localStorage.getItem('preferred_quality');
+          if (savedPref && savedPref !== 'auto') {
+            const targetHeight = parseInt(savedPref);
+            const foundIdx = levels.findIndex(lvl => lvl.height === targetHeight);
+            if (foundIdx !== -1) {
+              preferredLevel = foundIdx;
+              state.hlsInstance.currentLevel = preferredLevel;
+            }
+          }
+        } catch (e) {}
+
+        updateQualityMenu(levels, preferredLevel);
+      });
+
+      // Update resolution badge when auto bitrate switches level
+      state.hlsInstance.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+        if (state.hlsInstance && state.hlsInstance.currentLevel === -1) {
+          updateQualityLabel(-1, state.hlsInstance.levels);
+        }
       });
 
       let networkErrorCount = 0;
@@ -1702,13 +1852,23 @@ function playStream(url, startTime = 0) {
     // Normal MP4 file playback - play directly via HTML5 video tag (native non-CORS streaming)
     DOM.videoPlayer.src = url;
     DOM.videoPlayer.load();
-    if (startTime > 0) {
-      const onMetadata = () => {
+    const onMetadata = () => {
+      if (startTime > 0) {
         DOM.videoPlayer.currentTime = startTime;
-        DOM.videoPlayer.removeEventListener('loadedmetadata', onMetadata);
-      };
-      DOM.videoPlayer.addEventListener('loadedmetadata', onMetadata);
-    }
+      }
+      const vHeight = DOM.videoPlayer.videoHeight;
+      const resLabel = vHeight ? (vHeight >= 1080 ? `${vHeight}p Full HD` : `${vHeight}p`) : 'ต้นฉบับ';
+      const menuContainer = $('quality-menu-items');
+      if (menuContainer) {
+        menuContainer.innerHTML = `<button class="quality-menu-item active" data-level="0"><span>${resLabel} (ไฟล์ต้นฉบับ)</span><span class="quality-badge-tag">MP4</span></button>`;
+      }
+      const qualityLabel = $('quality-label');
+      if (qualityLabel) {
+        qualityLabel.textContent = vHeight ? `${vHeight}p` : 'MP4';
+      }
+      DOM.videoPlayer.removeEventListener('loadedmetadata', onMetadata);
+    };
+    DOM.videoPlayer.addEventListener('loadedmetadata', onMetadata);
     DOM.videoPlayer.play().catch(() => {});
   }
 }
@@ -1745,6 +1905,10 @@ function closeModal(e) {
   DOM.videoPlayer.pause();
   DOM.videoPlayer.removeAttribute('src');
   DOM.videoPlayer.load();
+  
+  // Reset quality label
+  const qualityLabel = $('quality-label');
+  if (qualityLabel) qualityLabel.textContent = 'Auto';
   
   // Clear iframe to prevent playing in background
   setIframeSource('about:blank');

@@ -445,10 +445,11 @@ async function run() {
   }
 
   function getPlaylistRank(file) {
-    const f = (file || '').toLowerCase();
+    const f = decodeURIComponent(file || '').toLowerCase();
     if (f.includes('heedeng')) return 1;
     if (f.includes('lovehee')) return 2;
     if (f.includes('homhee')) return 3;
+    if (f.includes('jav_อัปเดต') || f.includes('4_ส_ค_66')) return 4;
     return 99;
   }
 
