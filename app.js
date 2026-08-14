@@ -637,9 +637,14 @@ function initPlayerControls() {
   });
 }
 
-// ── Player Helpers ───────────────────────────────────
+let _lastToggleTime = 0;
 function togglePlayPause() {
+  const now = Date.now();
+  if (now - _lastToggleTime < 150) return;
+  _lastToggleTime = now;
+
   const v = DOM.videoPlayer;
+  if (!v) return;
   if (v.paused || v.ended) {
     v.play().catch(() => {});
     triggerCenterActionOverlay('play');
@@ -1116,6 +1121,7 @@ const gs = {
   speedIdx: 3,          // default = 1×
   touch: null,          // active touch tracking
   lastTap: { time: 0, zone: '' },
+  singleTapTimer: null,
   longPressTimer: null,
   gestureType: null,    // 'seek' | 'vol' | 'brightness' | null
   seekStartTime: 0,
@@ -1134,6 +1140,13 @@ function hideOverlay(id, delay = 800) {
 
 let _mouseDownInfo = null;
 
+function isPlayerInteractiveElement(target) {
+  if (!target) return false;
+  return !!target.closest(
+    '.player-controls, .modal-close, .lock-screen-overlay, .player-resume-prompt, .player-speed-menu, .player-quality-menu, .player-preview-card, .player-btn, .player-seek, .player-volume, .player-progress-wrap'
+  );
+}
+
 function initGestureControls() {
   initPreviewEngine();
 
@@ -1145,10 +1158,25 @@ function initGestureControls() {
     el.addEventListener('touchmove',   onTouchMove,   { passive: false });
     el.addEventListener('touchend',    onTouchEnd,    { passive: true });
     el.addEventListener('touchcancel', onTouchCancel, { passive: true });
-    // Mouse support for desktop drag-seek & click
     el.addEventListener('mousedown',   onMouseDown);
   });
   
+  if (DOM.playerWrap) {
+    DOM.playerWrap.addEventListener('mousedown', onMouseDown);
+    // Direct click fallback for desktop
+    DOM.playerWrap.addEventListener('click', (e) => {
+      if (isPlayerInteractiveElement(e.target)) return;
+      const isEmbed = DOM.playerWrap.classList.contains('embed-mode');
+      if (!isEmbed && !gs.locked) {
+        togglePlayPause();
+        triggerRipple();
+      }
+    });
+  }
+  if (DOM.videoPlayer) {
+    DOM.videoPlayer.addEventListener('mousedown', onMouseDown);
+  }
+
   // Mouse up & move on document
   document.addEventListener('mouseup', onMouseUp);
   document.addEventListener('mousemove', onMouseMoveDoc);
@@ -1158,7 +1186,7 @@ function initGestureControls() {
 function onTouchStart(e) {
   if (gs.locked) return; // ignore when locked
   const t = e.touches[0];
-  const zone = e.currentTarget.dataset.zone;
+  const zone = e.currentTarget.dataset.zone || 'center';
   const isEmbed = DOM.playerWrap && DOM.playerWrap.classList.contains('embed-mode');
 
   gs.touch = {
@@ -1243,8 +1271,11 @@ function onTouchEnd(e) {
     const now = Date.now();
     const zone = gs.touch.zone;
     const dt = now - gs.lastTap.time;
-    if (dt < 350) {
+    
+    if (dt < 320 && gs.lastTap.zone === zone && (zone === 'left' || zone === 'right' || zone === 'center')) {
       // Double-tap
+      clearTimeout(gs.singleTapTimer);
+      gs.singleTapTimer = null;
       if (zone === 'center') {
         toggleFullscreen();
         triggerCenterActionOverlay('fullscreen');
@@ -1255,17 +1286,25 @@ function onTouchEnd(e) {
         if (!wasEmbed) doSkip(10, 'right');
         else toggleFullscreen();
       }
-      gs.lastTap.time = 0;
+      gs.lastTap = { time: 0, zone: '' };
     } else {
       gs.lastTap = { time: now, zone };
-      // Single tap: in video mode center = play/pause; in embed mode, pass through
-      if (!wasEmbed && zone === 'center') {
-        togglePlayPause();
-        triggerRipple();
-      }
-      // Single tap left/right shows controls (video mode only)
-      if (!wasEmbed && (zone === 'left' || zone === 'right')) {
-        showControls();
+      
+      // Single tap: toggle Play/Pause across the entire video screen
+      if (!wasEmbed) {
+        if (zone === 'left' || zone === 'right') {
+          clearTimeout(gs.singleTapTimer);
+          gs.singleTapTimer = setTimeout(() => {
+            togglePlayPause();
+            triggerRipple();
+            showControls();
+            gs.singleTapTimer = null;
+          }, 220);
+        } else {
+          togglePlayPause();
+          triggerRipple();
+          showControls();
+        }
       }
     }
   }
@@ -1276,6 +1315,8 @@ function onTouchEnd(e) {
 
 function onTouchCancel() {
   clearTimeout(gs.longPressTimer);
+  clearTimeout(gs.singleTapTimer);
+  gs.singleTapTimer = null;
   if (DOM.videoPlayer.playbackRate === 2) {
     DOM.videoPlayer.playbackRate = gs.speedSteps[gs.speedIdx];
     hideOverlay('speed-boost-overlay', 0);
@@ -1292,13 +1333,14 @@ function onMouseDown(e) {
   if (gs.locked) return;
   const isEmbed = DOM.playerWrap && DOM.playerWrap.classList.contains('embed-mode');
   if (isEmbed) return;
-  if (e.target.closest('.player-controls, .modal-close, .lock-screen-overlay, .player-resume-prompt')) return;
+  if (e.button !== 0) return; // Only primary left click
+  if (isPlayerInteractiveElement(e.target)) return;
 
   _mouseDownInfo = {
     startX: e.clientX,
     startY: e.clientY,
     startTime: Date.now(),
-    startVT: DOM.videoPlayer.currentTime,
+    startVT: DOM.videoPlayer ? DOM.videoPlayer.currentTime : 0,
     moved: false,
   };
 }
@@ -1309,7 +1351,7 @@ function onMouseMoveDoc(e) {
   const dy = e.clientY - _mouseDownInfo.startY;
 
   if (!_mouseDownInfo.moved) {
-    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+    if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
       _mouseDownInfo.moved = true;
       const v = DOM.videoPlayer;
       if (v && v.duration) {
@@ -1342,12 +1384,15 @@ function onMouseMoveDoc(e) {
 function onMouseUp(e) {
   if (!_mouseDownInfo) return;
   
-  if (_mouseDownInfo.moved) {
+  const wasMoved = _mouseDownInfo.moved;
+  const elapsed = Date.now() - _mouseDownInfo.startTime;
+  _mouseDownInfo = null;
+
+  if (wasMoved) {
     endScrubbing();
   } else {
     // Clean Click on PC!
-    const elapsed = Date.now() - _mouseDownInfo.startTime;
-    if (elapsed < 350) {
+    if (elapsed < 650) {
       const isEmbed = DOM.playerWrap && DOM.playerWrap.classList.contains('embed-mode');
       if (!isEmbed) {
         togglePlayPause();
@@ -1355,8 +1400,6 @@ function onMouseUp(e) {
       }
     }
   }
-  
-  _mouseDownInfo = null;
 }
 
 // ── Gesture Actions ───────────────────────────────────
@@ -2960,7 +3003,7 @@ function clearRecentSearches() {
   `;
   document.body.appendChild(drawer);
 
-  // Search panel
+  // Search panel (Top-anchored for full visibility above mobile keyboard)
   const searchPanel = document.createElement('div');
   searchPanel.className = 'tab-search-panel';
   searchPanel.id = 'tab-search-panel';
@@ -2969,7 +3012,7 @@ function clearRecentSearches() {
       <div class="tab-search-panel-input-wrap" id="tab-search-input-wrap">
         <svg viewBox="0 0 24 24" class="tab-search-panel-icon"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         <input
-          type="search"
+          type="text"
           id="tab-search-input"
           class="tab-search-panel-input"
           placeholder="ค้นหาวิดีโอ..."
@@ -2979,11 +3022,12 @@ function clearRecentSearches() {
           spellcheck="false"
           enterkeyhint="search"
         />
+        <button class="tab-search-panel-clear" id="tab-search-clear-btn" aria-label="ล้างการค้นหา" title="ล้างการค้นหา">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
       </div>
       <button class="tab-search-panel-close" id="tab-search-close-btn" aria-label="ปิดค้นหา">
-        <svg class="tab-bar-icon" viewBox="0 0 24 24" style="width:18px;height:18px;">
-          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-        </svg>
+        <span>ยกเลิก</span>
       </button>
     </div>
     <div id="tab-search-suggestions" class="search-suggestions"></div>
@@ -3001,9 +3045,27 @@ function clearRecentSearches() {
   const tabSearchInput = document.getElementById('tab-search-input');
   const suggestionBox  = document.getElementById('tab-search-suggestions');
   const inputWrap      = document.getElementById('tab-search-input-wrap');
+  const tabClearBtn    = document.getElementById('tab-search-clear-btn');
 
   if (inputWrap && tabSearchInput) {
-    inputWrap.addEventListener('click', () => {
+    inputWrap.addEventListener('click', (e) => {
+      if (e.target !== tabClearBtn && (!tabClearBtn || !tabClearBtn.contains(e.target))) {
+        tabSearchInput.focus();
+      }
+    });
+  }
+
+  if (tabClearBtn && tabSearchInput) {
+    tabClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tabSearchInput.value = '';
+      tabClearBtn.classList.remove('visible');
+      state.searchQuery = '';
+      if (DOM.searchInput) DOM.searchInput.value = '';
+      const clearBtn = document.getElementById('search-clear-btn');
+      if (clearBtn) clearBtn.classList.remove('visible');
+      applyFilter();
+      renderSearchSuggestions('');
       tabSearchInput.focus();
     });
   }
@@ -3038,7 +3100,7 @@ function clearRecentSearches() {
       // Show all recents when query is empty
       suggestionBox.innerHTML = `
         <div class="search-recent-label">
-          ค้นหาล่าสุด
+          <span>ค้นหาล่าสุด</span>
           <button class="search-recent-clear" onclick="clearRecentSearches(); renderSearchSuggestions('')">ล้าง</button>
         </div>
         ${recents.map(r => `
@@ -3065,10 +3127,13 @@ function clearRecentSearches() {
 
   if (tabSearchInput) {
     tabSearchInput.addEventListener('input', (e) => {
-      debouncedTabSearch(e.target.value);
-      renderSearchSuggestions(e.target.value.trim().toLowerCase());
+      const val = e.target.value;
+      if (tabClearBtn) tabClearBtn.classList.toggle('visible', val.length > 0);
+      debouncedTabSearch(val);
+      renderSearchSuggestions(val.trim().toLowerCase());
     });
     tabSearchInput.addEventListener('focus', () => {
+      if (tabClearBtn) tabClearBtn.classList.toggle('visible', tabSearchInput.value.length > 0);
       renderSearchSuggestions(tabSearchInput.value.trim().toLowerCase());
     });
     tabSearchInput.addEventListener('keydown', (e) => {
@@ -3135,6 +3200,8 @@ function clearSearch() {
   if (tabInput) tabInput.value = '';
   const clearBtn = document.getElementById('search-clear-btn');
   if (clearBtn) clearBtn.classList.remove('visible');
+  const tabClearBtn = document.getElementById('tab-search-clear-btn');
+  if (tabClearBtn) tabClearBtn.classList.remove('visible');
   applyFilter();
 }
 
@@ -3197,6 +3264,8 @@ function closeTabOverlays() {
   const drawer   = document.getElementById('tab-categories-drawer');
   const panel    = document.getElementById('tab-search-panel');
   const backdrop = document.getElementById('tab-drawer-backdrop');
+  const tabInput = document.getElementById('tab-search-input');
+  if (tabInput) tabInput.blur();
   if (drawer)   drawer.classList.remove('open');
   if (panel)    panel.classList.remove('open');
   if (backdrop) backdrop.classList.remove('open');
