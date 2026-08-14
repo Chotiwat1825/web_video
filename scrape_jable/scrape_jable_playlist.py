@@ -247,10 +247,11 @@ async def resolve_playlist_file(file_path, limit=None):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
 
-        batch_size = 25
+        batch_size = 20
         for i in range(0, len(targets), batch_size):
             chunk = targets[i:i + batch_size]
             t_chunk_start = time.time()
+            prev_resolved = stats['resolved']
             tasks = [scrape_single_video(context, s, progress_cache, sem, stats) for s in chunk]
             await asyncio.gather(*tasks)
 
@@ -258,7 +259,13 @@ async def resolve_playlist_file(file_path, limit=None):
             save_json(file_path, playlist_data)
             duration = time.time() - t_chunk_start
             done_count = min(i + batch_size, len(targets))
-            print(f"--> Progress: [{done_count}/{len(targets)}] saved to disk. (Batch time: {duration:.2f}s, Rate: {len(chunk)/max(duration,0.01):.1f} v/s)")
+            batch_resolved = stats['resolved'] - prev_resolved
+            print(f"--> Progress: [{done_count}/{len(targets)}] saved to disk. (Batch time: {duration:.2f}s, Resolved: {batch_resolved}/{len(chunk)})")
+
+            # If Cloudflare rate limit is active (0 resolved in a batch of 20), pause gently to let rate limit cool down
+            if len(chunk) >= 15 and batch_resolved == 0:
+                print("[Notice] Cloudflare rate limit detected on Jable. Cooling down for 45 seconds...")
+                await asyncio.sleep(45)
 
         await browser.close()
 
