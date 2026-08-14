@@ -570,37 +570,50 @@ function initPlayerControls() {
   video.addEventListener('timeupdate', onTimeUpdate);
   video.addEventListener('progress', onBufferUpdate);
 
-  // ── Seekbar Live Preview & Hover UI ─
+  // ── Seekbar Live Preview & Synchronized Scrubbing ─
   const seekWrap = $('player-progress-wrap');
   const previewCard = $('player-preview-card');
 
   if (seekWrap) {
-    const handleSeekHover = (clientX) => {
-      if (!video.duration) return;
+    const getPctFromClientX = (clientX) => {
       const rect = seekWrap.getBoundingClientRect();
       const padding = 16;
       const activeWidth = rect.width - (padding * 2);
-      if (activeWidth <= 0) return;
-      
+      if (activeWidth <= 0) return 0;
       let mouseX = clientX - rect.left - padding;
       mouseX = Math.max(0, Math.min(activeWidth, mouseX));
-      
-      const pct = mouseX / activeWidth;
-      const targetTime = pct * video.duration;
-      
-      const prevTime = $('player-preview-time');
-      if (prevTime) prevTime.textContent = formatTime(targetTime);
-      
-      updatePreviewCardPosition(pct);
-      requestPreviewFrame(targetTime);
+      return mouseX / activeWidth;
     };
 
-    seek.addEventListener('mousemove', (e) => {
-      handleSeekHover(e.clientX);
-    });
-    seekWrap.addEventListener('mousemove', (e) => {
-      handleSeekHover(e.clientX);
-    });
+    const handleSeekHover = (clientX) => {
+      if (!video.duration) return;
+      const pct = getPctFromClientX(clientX);
+      const targetTime = pct * video.duration;
+
+      if (scrubState.isScrubbing) {
+        // Actively dragging: update red bar fill, thumb, targetTime, and preview!
+        updateScrubTarget(pct);
+      } else {
+        // Desktop hover: update preview card only
+        const prevTime = $('player-preview-time');
+        if (prevTime) prevTime.textContent = formatTime(targetTime);
+        updatePreviewCardPosition(pct);
+        requestPreviewFrame(targetTime);
+      }
+    };
+
+    const handleSeekTouchMove = (clientX) => {
+      if (!video.duration) return;
+      const pct = getPctFromClientX(clientX);
+      if (!scrubState.isScrubbing) {
+        startScrubbing(pct, 'seekbar');
+      } else {
+        updateScrubTarget(pct);
+      }
+    };
+
+    seek.addEventListener('mousemove', (e) => handleSeekHover(e.clientX));
+    seekWrap.addEventListener('mousemove', (e) => handleSeekHover(e.clientX));
 
     seekWrap.addEventListener('mouseleave', () => {
       if (!scrubState.isScrubbing && previewCard) {
@@ -608,56 +621,44 @@ function initPlayerControls() {
       }
     });
 
+    // Touch events for continuous, real-time dragging on mobile
+    seek.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        const pct = getPctFromClientX(e.touches[0].clientX);
+        startScrubbing(pct, 'seekbar');
+      }
+    }, { passive: false });
+
+    seekWrap.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        const pct = getPctFromClientX(e.touches[0].clientX);
+        startScrubbing(pct, 'seekbar');
+      }
+    }, { passive: false });
+
     seek.addEventListener('touchmove', (e) => {
       if (e.touches && e.touches[0]) {
-        handleSeekHover(e.touches[0].clientX);
+        e.preventDefault();
+        handleSeekTouchMove(e.touches[0].clientX);
       }
-    }, { passive: true });
+    }, { passive: false });
 
     seekWrap.addEventListener('touchmove', (e) => {
       if (e.touches && e.touches[0]) {
-        handleSeekHover(e.touches[0].clientX);
+        e.preventDefault();
+        handleSeekTouchMove(e.touches[0].clientX);
       }
-    }, { passive: true });
+    }, { passive: false });
 
-    // Handle range scrub start & stop on seekbar
+    // Handle mouse drag start & stop on seekbar
     seek.addEventListener('mousedown', (e) => {
-      const rect = seekWrap.getBoundingClientRect();
-      const padding = 16;
-      const activeWidth = rect.width - (padding * 2);
-      let mouseX = e.clientX - rect.left - padding;
-      mouseX = Math.max(0, Math.min(activeWidth, mouseX));
-      startScrubbing(mouseX / activeWidth, 'seekbar');
+      const pct = getPctFromClientX(e.clientX);
+      startScrubbing(pct, 'seekbar');
     });
     seekWrap.addEventListener('mousedown', (e) => {
-      const rect = seekWrap.getBoundingClientRect();
-      const padding = 16;
-      const activeWidth = rect.width - (padding * 2);
-      let mouseX = e.clientX - rect.left - padding;
-      mouseX = Math.max(0, Math.min(activeWidth, mouseX));
-      startScrubbing(mouseX / activeWidth, 'seekbar');
+      const pct = getPctFromClientX(e.clientX);
+      startScrubbing(pct, 'seekbar');
     });
-
-    seek.addEventListener('touchstart', (e) => {
-      if (e.touches && e.touches[0]) {
-        const rect = seekWrap.getBoundingClientRect();
-        const padding = 16;
-        const activeWidth = rect.width - (padding * 2);
-        let touchX = e.touches[0].clientX - rect.left - padding;
-        touchX = Math.max(0, Math.min(activeWidth, touchX));
-        startScrubbing(touchX / activeWidth, 'seekbar');
-      }
-    }, { passive: true });
-    seekWrap.addEventListener('touchstart', (e) => {
-      if (e.touches && e.touches[0]) {
-        const rect = seekWrap.getBoundingClientRect();
-        const padding = 16;
-        const activeWidth = rect.width - (padding * 2);
-        let touchX = e.touches[0].clientX - rect.left - padding;
-        touchX = Math.max(0, Math.min(activeWidth, touchX));
-        startScrubbing(touchX / activeWidth, 'seekbar');
-      }
-    }, { passive: true });
 
     seek.addEventListener('touchend', () => {
       endScrubbing();
@@ -681,7 +682,39 @@ function initPlayerControls() {
     });
   }
 
-  // Global safety release for scrubbing
+  // Global safety tracking & release across document during active dragging
+  document.addEventListener('mousemove', (e) => {
+    if (scrubState.isScrubbing && scrubState.mode === 'seekbar' && video.duration) {
+      const seekWrap = $('player-progress-wrap');
+      if (seekWrap) {
+        const rect = seekWrap.getBoundingClientRect();
+        const padding = 16;
+        const activeWidth = rect.width - (padding * 2);
+        if (activeWidth > 0) {
+          let mouseX = e.clientX - rect.left - padding;
+          mouseX = Math.max(0, Math.min(activeWidth, mouseX));
+          updateScrubTarget(mouseX / activeWidth);
+        }
+      }
+    }
+  });
+
+  document.addEventListener('touchmove', (e) => {
+    if (scrubState.isScrubbing && scrubState.mode === 'seekbar' && e.touches && e.touches[0] && video.duration) {
+      const seekWrap = $('player-progress-wrap');
+      if (seekWrap) {
+        const rect = seekWrap.getBoundingClientRect();
+        const padding = 16;
+        const activeWidth = rect.width - (padding * 2);
+        if (activeWidth > 0) {
+          let touchX = e.touches[0].clientX - rect.left - padding;
+          touchX = Math.max(0, Math.min(activeWidth, touchX));
+          updateScrubTarget(touchX / activeWidth);
+        }
+      }
+    }
+  }, { passive: false });
+
   document.addEventListener('mouseup', () => {
     if (scrubState.isScrubbing) endScrubbing();
   });
