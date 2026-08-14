@@ -306,9 +306,45 @@ function setupEventListeners() {
 
   // Keyboard controls
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
-    if (e.key === 'ArrowLeft') navigateVideo(-1);
-    if (e.key === 'ArrowRight') navigateVideo(1);
+    const tag = e.target.tagName;
+    if (['INPUT', 'TEXTAREA'].includes(tag)) return;
+    
+    if (DOM.modalOverlay && DOM.modalOverlay.classList.contains('open')) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      } else if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        doSkip(-5, 'left');
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        doSkip(5, 'right');
+      } else if (e.key === 'j' || e.key === 'J') {
+        e.preventDefault();
+        doSkip(-10, 'left');
+      } else if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        doSkip(10, 'right');
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleMute();
+      } else if (e.key === '[' || (e.shiftKey && e.key === 'N')) {
+        e.preventDefault();
+        navigateVideo(-1);
+      } else if (e.key === ']' || (e.shiftKey && e.key === 'P')) {
+        e.preventDefault();
+        navigateVideo(1);
+      }
+    } else {
+      if (e.key === 'ArrowLeft') navigateVideo(-1);
+      if (e.key === 'ArrowRight') navigateVideo(1);
+    }
   });
 
   // Video player loading states
@@ -485,38 +521,46 @@ function initPlayerControls() {
 
   // ── Seek (progress bar) ─────────────────────────────
   seek.addEventListener('input', () => {
-    const pct = seek.value / 100;
-    if (video.duration) {
-      video.currentTime = pct * video.duration;
+    const pct = parseFloat(seek.value) / 100;
+    if (!scrubState.isScrubbing) {
+      startScrubbing(pct);
+    } else {
+      updateScrubTarget(pct);
     }
-    updateProgressUI(pct);
+  });
+  seek.addEventListener('change', () => {
+    endScrubbing();
   });
   video.addEventListener('timeupdate', onTimeUpdate);
   video.addEventListener('progress', onBufferUpdate);
 
-  // ── Seek Tooltip & Hover/Scrubbing UI (YouTube style) ─
+  // ── Seek Tooltip & Hover/Scrubbing UI (YouTube style with Live Preview) ─
   const seekWrap = $('player-progress-wrap');
-  const seekTooltip = $('player-progress-tooltip');
 
-  if (seekWrap && seekTooltip) {
+  if (seekWrap) {
     const handleSeekHover = (clientX) => {
       if (!video.duration) return;
       const rect = seekWrap.getBoundingClientRect();
       const padding = 16;
       const activeWidth = rect.width - (padding * 2);
       
-      // Calculate cursor X relative to progress bar active area
       let mouseX = clientX - rect.left - padding;
       mouseX = Math.max(0, Math.min(activeWidth, mouseX));
       
       const pct = mouseX / activeWidth;
       const targetTime = pct * video.duration;
       
-      seekTooltip.textContent = formatTime(targetTime);
-      seekTooltip.style.left = (mouseX + padding) + 'px';
+      const prevTime = $('player-preview-time');
+      if (prevTime) prevTime.textContent = formatTime(targetTime);
+      
+      updatePreviewCardPosition(pct);
+      requestPreviewFrame(targetTime);
     };
 
     seek.addEventListener('mousemove', (e) => {
+      handleSeekHover(e.clientX);
+    });
+    seekWrap.addEventListener('mousemove', (e) => {
       handleSeekHover(e.clientX);
     });
 
@@ -526,19 +570,25 @@ function initPlayerControls() {
       }
     }, { passive: true });
 
-    // Handle class toggles for thick bar and persistent tooltip during scrubbing
-    seek.addEventListener('mousedown', () => {
-      seekWrap.classList.add('scrubbing');
+    // Handle range scrub start & stop
+    seek.addEventListener('mousedown', (e) => {
+      const rect = seekWrap.getBoundingClientRect();
+      const padding = 16;
+      const activeWidth = rect.width - (padding * 2);
+      let mouseX = e.clientX - rect.left - padding;
+      mouseX = Math.max(0, Math.min(activeWidth, mouseX));
+      startScrubbing(mouseX / activeWidth);
     });
-    document.addEventListener('mouseup', () => {
-      seekWrap.classList.remove('scrubbing');
-    });
-    seek.addEventListener('touchstart', () => {
-      seekWrap.classList.add('scrubbing');
-    });
-    document.addEventListener('touchend', () => {
-      seekWrap.classList.remove('scrubbing');
-    });
+    seek.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        const rect = seekWrap.getBoundingClientRect();
+        const padding = 16;
+        const activeWidth = rect.width - (padding * 2);
+        let touchX = e.touches[0].clientX - rect.left - padding;
+        touchX = Math.max(0, Math.min(activeWidth, touchX));
+        startScrubbing(touchX / activeWidth);
+      }
+    }, { passive: true });
   }
 
   // ── Volume slider ───────────────────────────────────
@@ -763,7 +813,7 @@ function updateFullscreenIcon() {
 
 function onTimeUpdate() {
   const v = DOM.videoPlayer;
-  if (!v.duration) return;
+  if (!v || !v.duration || scrubState.isScrubbing) return;
   const pct = v.currentTime / v.duration;
   updateProgressUI(pct);
   // Sync seek slider
@@ -824,6 +874,231 @@ function formatTime(s) {
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+// ── Scrubbing & Seeking State ───────────────────────────
+const scrubState = {
+  isScrubbing: false,
+  wasPlaying: false,
+  targetPct: 0,
+  targetTime: 0,
+};
+
+function startScrubbing(initialPct) {
+  const v = DOM.videoPlayer;
+  if (!v || !v.duration || isNaN(v.duration)) return;
+  scrubState.isScrubbing = true;
+  scrubState.wasPlaying = !v.paused;
+  v.pause();
+  
+  const wrap = $('player-progress-wrap');
+  if (wrap) wrap.classList.add('scrubbing');
+  
+  updateScrubTarget(initialPct);
+}
+
+function updateScrubTarget(pct) {
+  const v = DOM.videoPlayer;
+  if (!v || !v.duration) return;
+  
+  const clampedPct = Math.max(0, Math.min(1, pct));
+  scrubState.targetPct = clampedPct;
+  scrubState.targetTime = clampedPct * v.duration;
+  
+  // 1. Update visual fill and thumb on progress bar
+  updateProgressUI(clampedPct);
+  
+  // 2. Sync range input value
+  const seek = $('player-seek');
+  if (seek) seek.value = clampedPct * 100;
+  
+  // 3. Update preview time label
+  const timeStr = formatTime(scrubState.targetTime);
+  const prevTime = $('player-preview-time');
+  if (prevTime) prevTime.textContent = timeStr;
+  
+  // 4. Update preview card X position
+  updatePreviewCardPosition(clampedPct);
+  
+  // 5. Update preview frame thumbnail
+  requestPreviewFrame(scrubState.targetTime);
+  
+  // 6. Update center scrub overlay if visible
+  const posEl = $('seek-scrub-pos');
+  const barEl = $('seek-scrub-bar');
+  if (posEl) posEl.textContent = timeStr + ' / ' + formatTime(v.duration);
+  if (barEl) barEl.style.width = (clampedPct * 100).toFixed(1) + '%';
+}
+
+function endScrubbing() {
+  if (!scrubState.isScrubbing) return;
+  const v = DOM.videoPlayer;
+  
+  if (v && v.duration && isFinite(scrubState.targetTime)) {
+    v.currentTime = scrubState.targetTime;
+  }
+  
+  if (scrubState.wasPlaying && v) {
+    v.play().catch(() => {});
+  }
+  
+  scrubState.isScrubbing = false;
+  const wrap = $('player-progress-wrap');
+  if (wrap) wrap.classList.remove('scrubbing');
+  hideOverlay('seek-scrub-overlay', 400);
+}
+
+// ── Preview Frame Engine ────────────────────────────────
+let _previewHls = null;
+let _previewThrottleTimer = null;
+let _lastPreviewTime = -1;
+
+function initPreviewEngine() {
+  const prevVideo = $('player-preview-video');
+  if (!prevVideo) return;
+  
+  const renderToCanvases = () => {
+    if (!prevVideo.videoWidth || !prevVideo.videoHeight) return;
+    
+    // Draw to floating seek preview canvas
+    const canvas = $('player-preview-canvas');
+    if (canvas) {
+      if (canvas.width !== prevVideo.videoWidth) canvas.width = prevVideo.videoWidth;
+      if (canvas.height !== prevVideo.videoHeight) canvas.height = prevVideo.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        try {
+          ctx.drawImage(prevVideo, 0, 0, canvas.width, canvas.height);
+        } catch (e) {}
+      }
+    }
+    
+    // Draw to center gesture scrub canvas
+    const scrubCanvas = $('seek-scrub-canvas');
+    const scrubOverlay = $('seek-scrub-overlay');
+    if (scrubCanvas && scrubOverlay && scrubOverlay.classList.contains('show')) {
+      if (scrubCanvas.width !== prevVideo.videoWidth) scrubCanvas.width = prevVideo.videoWidth;
+      if (scrubCanvas.height !== prevVideo.videoHeight) scrubCanvas.height = prevVideo.videoHeight;
+      const sCtx = scrubCanvas.getContext('2d');
+      if (sCtx) {
+        try {
+          sCtx.drawImage(prevVideo, 0, 0, scrubCanvas.width, scrubCanvas.height);
+        } catch (e) {}
+      }
+    }
+    
+    const card = $('player-preview-card');
+    if (card) card.classList.remove('loading');
+  };
+  
+  prevVideo.addEventListener('seeked', renderToCanvases);
+  prevVideo.addEventListener('loadeddata', renderToCanvases);
+}
+
+function setupPreviewSource(url, initialHlsUrl) {
+  const prevVideo = $('player-preview-video');
+  const posterImg = $('player-preview-poster');
+  const scrubPoster = $('seek-scrub-poster');
+  
+  const posterSrc = (state.currentVideo && state.currentVideo.image) ? state.currentVideo.image : '';
+  if (posterImg) posterImg.src = posterSrc;
+  if (scrubPoster) scrubPoster.src = posterSrc;
+  
+  if (!prevVideo) return;
+  
+  // Cleanup existing preview HLS
+  if (_previewHls) {
+    _previewHls.destroy();
+    _previewHls = null;
+  }
+  
+  if (isEmbedUrl(url)) {
+    prevVideo.removeAttribute('src');
+    return;
+  }
+  
+  const isHls = url.includes('.m3u8') || url.includes('/playlist') || url.includes('master.m3u8');
+  if (isHls && Hls.isSupported()) {
+    _previewHls = new Hls({
+      maxBufferLength: 5,
+      maxMaxBufferLength: 10,
+      enableWorker: true,
+      autoStartLoad: true,
+    });
+    _previewHls.loadSource(initialHlsUrl);
+    _previewHls.attachMedia(prevVideo);
+    _previewHls.on(Hls.Events.MANIFEST_PARSED, () => {
+      if (_previewHls && _previewHls.levels && _previewHls.levels.length > 0) {
+        _previewHls.currentLevel = 0; // lowest quality for fast thumbnail fetching
+      }
+    });
+  } else {
+    prevVideo.src = initialHlsUrl || url;
+  }
+}
+
+function cleanupPreviewEngine() {
+  if (_previewHls) {
+    _previewHls.destroy();
+    _previewHls = null;
+  }
+  const prevVideo = $('player-preview-video');
+  if (prevVideo) {
+    prevVideo.pause();
+    prevVideo.removeAttribute('src');
+    prevVideo.load();
+  }
+  _lastPreviewTime = -1;
+  clearTimeout(_previewThrottleTimer);
+  _previewThrottleTimer = null;
+  
+  const canvas = $('player-preview-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  const scrubCanvas = $('seek-scrub-canvas');
+  if (scrubCanvas) {
+    const ctx = scrubCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, scrubCanvas.width, scrubCanvas.height);
+  }
+}
+
+function requestPreviewFrame(targetTime) {
+  const prevVideo = $('player-preview-video');
+  if (!prevVideo || !isFinite(targetTime)) return;
+  
+  const card = $('player-preview-card');
+  if (card) card.classList.add('loading');
+  
+  if (_previewThrottleTimer) return;
+  _previewThrottleTimer = setTimeout(() => {
+    _previewThrottleTimer = null;
+    if (prevVideo && isFinite(targetTime) && Math.abs(_lastPreviewTime - targetTime) > 0.3) {
+      _lastPreviewTime = targetTime;
+      try {
+        prevVideo.currentTime = Math.max(0, targetTime);
+      } catch (err) {}
+    }
+  }, 60);
+}
+
+function updatePreviewCardPosition(pct) {
+  const card = $('player-preview-card');
+  const seekWrap = $('player-progress-wrap');
+  if (!card || !seekWrap) return;
+  
+  const wrapRect = seekWrap.getBoundingClientRect();
+  const padding = 16;
+  const activeWidth = wrapRect.width - (padding * 2);
+  const cardWidth = card.offsetWidth || 160;
+  
+  const rawX = padding + (pct * activeWidth);
+  const minX = (cardWidth / 2) + 8;
+  const maxX = wrapRect.width - (cardWidth / 2) - 8;
+  const clampedX = Math.max(minX, Math.min(maxX, rawX));
+  
+  card.style.left = clampedX + 'px';
+}
+
 // ── Gesture Controls ──────────────────────────────────
 const gs = {
   locked: false,
@@ -848,7 +1123,11 @@ function hideOverlay(id, delay = 800) {
   }, delay);
 }
 
+let _mouseDownInfo = null;
+
 function initGestureControls() {
+  initPreviewEngine();
+
   const zones = ['gz-left', 'gz-center', 'gz-right'];
   zones.forEach(id => {
     const el = $(id);
@@ -857,10 +1136,11 @@ function initGestureControls() {
     el.addEventListener('touchmove',   onTouchMove,   { passive: false });
     el.addEventListener('touchend',    onTouchEnd,    { passive: true });
     el.addEventListener('touchcancel', onTouchCancel, { passive: true });
-    // Mouse support for desktop drag-seek
+    // Mouse support for desktop drag-seek & click
     el.addEventListener('mousedown',   onMouseDown);
   });
-  // Mouse up anywhere ends scrub
+  
+  // Mouse up & move on document
   document.addEventListener('mouseup', onMouseUp);
   document.addEventListener('mousemove', onMouseMoveDoc);
 }
@@ -938,6 +1218,11 @@ function onTouchEnd(e) {
     if (ol) hideOverlay('speed-boost-overlay', 0);
   }
 
+  // End scrub if seeking
+  if (scrubState.isScrubbing || gs.gestureType === 'seek') {
+    endScrubbing();
+  }
+
   // Hide video-only overlays
   if (!wasEmbed) {
     if (gs.gestureType === 'seek') hideOverlay('seek-scrub-overlay', 400);
@@ -986,34 +1271,83 @@ function onTouchCancel() {
     DOM.videoPlayer.playbackRate = gs.speedSteps[gs.speedIdx];
     hideOverlay('speed-boost-overlay', 0);
   }
+  if (scrubState.isScrubbing) {
+    endScrubbing();
+  }
   gs.touch = null;
   gs.gestureType = null;
 }
 
-// ── Mouse drag-seek for desktop ───────────────────────
-let _mouseScrubbing = false;
-let _mouseStartX = 0;
-let _mouseStartVT = 0;
+// ── Desktop Mouse Drag & Click Handling ───────────────
 function onMouseDown(e) {
   if (gs.locked) return;
   const isEmbed = DOM.playerWrap && DOM.playerWrap.classList.contains('embed-mode');
-  if (isEmbed) return; // don't intercept mouse drags in embed-mode
-  _mouseScrubbing = true;
-  _mouseStartX = e.clientX;
-  _mouseStartVT = DOM.videoPlayer.currentTime;
-  gs.gestureType = 'seek';
+  if (isEmbed) return;
+  if (e.target.closest('.player-controls, .modal-close, .lock-screen-overlay, .player-resume-prompt')) return;
+
+  _mouseDownInfo = {
+    startX: e.clientX,
+    startY: e.clientY,
+    startTime: Date.now(),
+    startVT: DOM.videoPlayer.currentTime,
+    moved: false,
+  };
 }
+
 function onMouseMoveDoc(e) {
-  if (!_mouseScrubbing || gs.locked) return;
-  const dx = e.clientX - _mouseStartX;
-  handleSeekScrub(dx, _mouseStartVT);
-}
-function onMouseUp() {
-  if (_mouseScrubbing) {
-    hideOverlay('seek-scrub-overlay', 400);
-    _mouseScrubbing = false;
-    gs.gestureType = null;
+  if (!_mouseDownInfo || gs.locked) return;
+  const dx = e.clientX - _mouseDownInfo.startX;
+  const dy = e.clientY - _mouseDownInfo.startY;
+
+  if (!_mouseDownInfo.moved) {
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      _mouseDownInfo.moved = true;
+      const v = DOM.videoPlayer;
+      if (v && v.duration) {
+        startScrubbing(_mouseDownInfo.startVT / v.duration);
+      }
+    }
   }
+
+  if (_mouseDownInfo.moved) {
+    const v = DOM.videoPlayer;
+    if (!v || !v.duration) return;
+    const delta = dx * 0.3;
+    const newTime = Math.max(0, Math.min(v.duration, _mouseDownInfo.startVT + delta));
+    const pct = newTime / v.duration;
+    
+    updateScrubTarget(pct);
+
+    // Show center overlay with delta
+    const ol = $('seek-scrub-overlay');
+    const deltaEl = $('seek-scrub-delta');
+    if (ol) {
+      ol.classList.add('show');
+      const sign = delta >= 0 ? '+' : '';
+      if (deltaEl) deltaEl.textContent = sign + formatTime(Math.abs(delta));
+      clearTimeout(_overlayHideTimers['seek-scrub-overlay']);
+    }
+  }
+}
+
+function onMouseUp(e) {
+  if (!_mouseDownInfo) return;
+  
+  if (_mouseDownInfo.moved) {
+    endScrubbing();
+  } else {
+    // Clean Click on PC!
+    const elapsed = Date.now() - _mouseDownInfo.startTime;
+    if (elapsed < 350) {
+      const isEmbed = DOM.playerWrap && DOM.playerWrap.classList.contains('embed-mode');
+      if (!isEmbed) {
+        togglePlayPause();
+        triggerRipple();
+      }
+    }
+  }
+  
+  _mouseDownInfo = null;
 }
 
 // ── Gesture Actions ───────────────────────────────────
@@ -1034,24 +1368,27 @@ function doSkip(secs, side) {
 
 function handleSeekScrub(dx, startVT) {
   const v = DOM.videoPlayer;
-  if (!v.duration) return;
+  if (!v || !v.duration) return;
   const baseVT = (startVT !== undefined) ? startVT : (gs.touch ? gs.touch.startVideoTime : v.currentTime);
+  
+  if (!scrubState.isScrubbing) {
+    startScrubbing(baseVT / v.duration);
+  }
+  
   // 1px = 0.3s seek
   const delta = dx * 0.3;
   const newTime = Math.max(0, Math.min(v.duration, baseVT + delta));
-  v.currentTime = newTime;
+  const pct = newTime / v.duration;
+  
+  updateScrubTarget(pct);
 
   // Show overlay
   const ol = $('seek-scrub-overlay');
   const deltaEl = $('seek-scrub-delta');
-  const posEl   = $('seek-scrub-pos');
-  const barEl   = $('seek-scrub-bar');
   if (!ol) return;
   ol.classList.add('show');
   const sign = delta >= 0 ? '+' : '';
   if (deltaEl) deltaEl.textContent = sign + formatTime(Math.abs(delta));
-  if (posEl)   posEl.textContent   = formatTime(newTime) + ' / ' + formatTime(v.duration);
-  if (barEl)   barEl.style.width   = ((newTime / v.duration) * 100).toFixed(1) + '%';
   clearTimeout(_overlayHideTimers['seek-scrub-overlay']);
 }
 
@@ -1873,6 +2210,7 @@ function playStream(url, startTime = 0) {
     DOM.playerWrap.classList.add('embed-mode');
     setIframeSource(url);
     DOM.playerLoading.classList.remove('show');
+    setupPreviewSource(url, '');
     return;
   } else {
     DOM.playerWrap.classList.remove('embed-mode');
@@ -1886,6 +2224,9 @@ function playStream(url, startTime = 0) {
     // If local, masteplayers, or mushroomtrack/maplecache, use proxy. On GitHub Pages, try direct first with fallback.
     const proxiedUrl = getProxiedUrl(url);
     const initialHlsUrl = (isLocal || url.includes('masteplayers.com') || url.includes('mushroomtrack.com') || url.includes('maplecache.com')) ? proxiedUrl : url;
+
+    // Setup live preview frame extractor
+    setupPreviewSource(url, initialHlsUrl);
 
     if (Hls.isSupported()) {
       state.hlsInstance = new Hls({
@@ -1974,6 +2315,7 @@ function playStream(url, startTime = 0) {
     }
   } else {
     // Normal MP4 file playback - play directly via HTML5 video tag (native non-CORS streaming)
+    setupPreviewSource(url, url);
     DOM.videoPlayer.src = url;
     DOM.videoPlayer.load();
     const onMetadata = () => {
@@ -2029,6 +2371,11 @@ function closeModal(e) {
   DOM.videoPlayer.pause();
   DOM.videoPlayer.removeAttribute('src');
   DOM.videoPlayer.load();
+  
+  cleanupPreviewEngine();
+  if (scrubState.isScrubbing) {
+    scrubState.isScrubbing = false;
+  }
   
   // Reset quality label
   const qualityLabel = $('quality-label');

@@ -40,7 +40,7 @@
 
   <!-- Embedded HLS.js for .m3u8 streaming links support on all browsers -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <link rel="stylesheet" href="style.css?v=1.0.18" />
+  <link rel="stylesheet" href="style.css?v=1.0.19" />
 </head>
 <body>
 
@@ -203,6 +203,13 @@
           preload="metadata"
           poster=""
         ></video>
+        <video
+          id="player-preview-video"
+          class="player-preview-video-hidden"
+          muted
+          playsinline
+          preload="auto"
+        ></video>
         <iframe
           id="iframe-player"
           allowfullscreen
@@ -225,6 +232,17 @@
             <div class="player-progress-fill" id="player-progress-fill"></div>
             <div class="player-progress-thumb" id="player-progress-thumb"></div>
             <div class="player-progress-tooltip" id="player-progress-tooltip">0:00</div>
+            
+            <!-- Floating Thumbnail Preview Card -->
+            <div class="player-preview-card" id="player-preview-card">
+              <div class="player-preview-media">
+                <img class="player-preview-poster" id="player-preview-poster" src="" alt="Preview frame" />
+                <canvas class="player-preview-canvas" id="player-preview-canvas"></canvas>
+                <div class="player-preview-spinner" id="player-preview-spinner"></div>
+              </div>
+              <div class="player-preview-time" id="player-preview-time">0:00</div>
+            </div>
+
             <input type="range" class="player-seek" id="player-seek" min="0" max="100" step="0.1" value="0" />
           </div>
 
@@ -344,6 +362,10 @@
 
         <!-- Seek Scrub Overlay -->
         <div class="seek-scrub-overlay" id="seek-scrub-overlay">
+          <div class="seek-scrub-preview" id="seek-scrub-preview">
+            <img class="seek-scrub-poster" id="seek-scrub-poster" src="" alt="preview frame" />
+            <canvas class="seek-scrub-canvas" id="seek-scrub-canvas"></canvas>
+          </div>
           <div class="seek-scrub-delta" id="seek-scrub-delta">+0:00</div>
           <div class="seek-scrub-pos" id="seek-scrub-pos">00:00 / 00:00</div>
           <div class="seek-scrub-bar-track">
@@ -516,7 +538,7 @@
   </nav>
 
   <!-- Main App Logic -->
-  <script src="app.js?v=1.0.18"></script>
+  <script src="app.js?v=1.0.19"></script>
 
   <!-- ===== iOS "Add to Home Screen" Install Prompt ===== -->
   <!-- iOS does not support beforeinstallprompt, so we detect manually -->
