@@ -534,10 +534,11 @@ function initPlayerControls() {
   video.addEventListener('timeupdate', onTimeUpdate);
   video.addEventListener('progress', onBufferUpdate);
 
-  // ── Seek Tooltip & Hover/Scrubbing UI (YouTube style with Live Preview) ─
+  // ── Seek Tooltip & Hover/Scrubbing UI (YouTube style) ─
   const seekWrap = $('player-progress-wrap');
+  const seekTooltip = $('player-progress-tooltip');
 
-  if (seekWrap) {
+  if (seekWrap && seekTooltip) {
     const handleSeekHover = (clientX) => {
       if (!video.duration) return;
       const rect = seekWrap.getBoundingClientRect();
@@ -550,11 +551,8 @@ function initPlayerControls() {
       const pct = mouseX / activeWidth;
       const targetTime = pct * video.duration;
       
-      const prevTime = $('player-preview-time');
-      if (prevTime) prevTime.textContent = formatTime(targetTime);
-      
-      updatePreviewCardPosition(pct);
-      requestPreviewFrame(targetTime);
+      seekTooltip.textContent = formatTime(targetTime);
+      seekTooltip.style.left = (mouseX + padding) + 'px';
     };
 
     seek.addEventListener('mousemove', (e) => {
@@ -910,18 +908,22 @@ function updateScrubTarget(pct) {
   const seek = $('player-seek');
   if (seek) seek.value = clampedPct * 100;
   
-  // 3. Update preview time label
+  // 3. Update seek tooltip on progress bar
   const timeStr = formatTime(scrubState.targetTime);
-  const prevTime = $('player-preview-time');
-  if (prevTime) prevTime.textContent = timeStr;
+  const seekWrap = $('player-progress-wrap');
+  const seekTooltip = $('player-progress-tooltip');
+  if (seekWrap && seekTooltip) {
+    const wrapRect = seekWrap.getBoundingClientRect();
+    const padding = 16;
+    const activeWidth = wrapRect.width - (padding * 2);
+    seekTooltip.textContent = timeStr;
+    seekTooltip.style.left = (padding + (clampedPct * activeWidth)) + 'px';
+  }
   
-  // 4. Update preview card X position
-  updatePreviewCardPosition(clampedPct);
-  
-  // 5. Update preview frame thumbnail
+  // 4. Update preview frame thumbnail (for center gesture scrub overlay)
   requestPreviewFrame(scrubState.targetTime);
   
-  // 6. Update center scrub overlay if visible
+  // 5. Update center scrub overlay if visible
   const posEl = $('seek-scrub-pos');
   const barEl = $('seek-scrub-bar');
   if (posEl) posEl.textContent = timeStr + ' / ' + formatTime(v.duration);
@@ -958,19 +960,6 @@ function initPreviewEngine() {
   const renderToCanvases = () => {
     if (!prevVideo.videoWidth || !prevVideo.videoHeight) return;
     
-    // Draw to floating seek preview canvas
-    const canvas = $('player-preview-canvas');
-    if (canvas) {
-      if (canvas.width !== prevVideo.videoWidth) canvas.width = prevVideo.videoWidth;
-      if (canvas.height !== prevVideo.videoHeight) canvas.height = prevVideo.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        try {
-          ctx.drawImage(prevVideo, 0, 0, canvas.width, canvas.height);
-        } catch (e) {}
-      }
-    }
-    
     // Draw to center gesture scrub canvas
     const scrubCanvas = $('seek-scrub-canvas');
     const scrubOverlay = $('seek-scrub-overlay');
@@ -984,9 +973,6 @@ function initPreviewEngine() {
         } catch (e) {}
       }
     }
-    
-    const card = $('player-preview-card');
-    if (card) card.classList.remove('loading');
   };
   
   prevVideo.addEventListener('seeked', renderToCanvases);
@@ -995,11 +981,9 @@ function initPreviewEngine() {
 
 function setupPreviewSource(url, initialHlsUrl) {
   const prevVideo = $('player-preview-video');
-  const posterImg = $('player-preview-poster');
   const scrubPoster = $('seek-scrub-poster');
   
   const posterSrc = (state.currentVideo && state.currentVideo.image) ? state.currentVideo.image : '';
-  if (posterImg) posterImg.src = posterSrc;
   if (scrubPoster) scrubPoster.src = posterSrc;
   
   if (!prevVideo) return;
@@ -1050,11 +1034,6 @@ function cleanupPreviewEngine() {
   clearTimeout(_previewThrottleTimer);
   _previewThrottleTimer = null;
   
-  const canvas = $('player-preview-canvas');
-  if (canvas) {
-    const ctx = canvas.getContext('2d');
-    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
   const scrubCanvas = $('seek-scrub-canvas');
   if (scrubCanvas) {
     const ctx = scrubCanvas.getContext('2d');
@@ -1066,9 +1045,6 @@ function requestPreviewFrame(targetTime) {
   const prevVideo = $('player-preview-video');
   if (!prevVideo || !isFinite(targetTime)) return;
   
-  const card = $('player-preview-card');
-  if (card) card.classList.add('loading');
-  
   if (_previewThrottleTimer) return;
   _previewThrottleTimer = setTimeout(() => {
     _previewThrottleTimer = null;
@@ -1079,24 +1055,6 @@ function requestPreviewFrame(targetTime) {
       } catch (err) {}
     }
   }, 60);
-}
-
-function updatePreviewCardPosition(pct) {
-  const card = $('player-preview-card');
-  const seekWrap = $('player-progress-wrap');
-  if (!card || !seekWrap) return;
-  
-  const wrapRect = seekWrap.getBoundingClientRect();
-  const padding = 16;
-  const activeWidth = wrapRect.width - (padding * 2);
-  const cardWidth = card.offsetWidth || 160;
-  
-  const rawX = padding + (pct * activeWidth);
-  const minX = (cardWidth / 2) + 8;
-  const maxX = wrapRect.width - (cardWidth / 2) - 8;
-  const clampedX = Math.max(minX, Math.min(maxX, rawX));
-  
-  card.style.left = clampedX + 'px';
 }
 
 // ── Gesture Controls ──────────────────────────────────
