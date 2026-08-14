@@ -92,17 +92,21 @@ function getDynamicIndex() {
     }
   }
   
-  // Sort descending by: Heedeng & Lovehee first, then health score, then alphabetically by name
-  return index.sort((a, b) => {
-    const isHeedengA = a.file && a.file.toLowerCase().includes('heedeng');
-    const isHeedengB = b.file && b.file.toLowerCase().includes('heedeng');
-    const isLoveheeA = a.file && a.file.toLowerCase().includes('lovehee');
-    const isLoveheeB = b.file && b.file.toLowerCase().includes('lovehee');
+  function getPlaylistRank(file) {
+    const f = (file || '').toLowerCase();
+    if (f.includes('heedeng')) return 1;
+    if (f.includes('lovehee')) return 2;
+    if (f.includes('homhee')) return 3;
+    return 99;
+  }
 
-    if (isHeedengA && !isHeedengB) return -1;
-    if (isHeedengB && !isHeedengA) return 1;
-    if (isLoveheeA && !isLoveheeB) return -1;
-    if (isLoveheeB && !isLoveheeA) return 1;
+  // Sort: Top priority playlists first (Heedeng, Lovehee, Homhee), then health score desc, then name asc
+  return index.sort((a, b) => {
+    const rankA = getPlaylistRank(a.file);
+    const rankB = getPlaylistRank(b.file);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
 
     const healthA = a.health !== undefined ? a.health : 100;
     const healthB = b.health !== undefined ? b.health : 100;
@@ -223,7 +227,17 @@ const server = http.createServer((req, res) => {
       if (targetRes.headers['content-range']) resHeaders['Content-Range'] = targetRes.headers['content-range'];
       if (targetRes.headers['accept-ranges']) resHeaders['Accept-Ranges'] = targetRes.headers['accept-ranges'];
 
-      const isM3u8 = targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('mpegURL');
+      const isSegment = targetUrl.endsWith('.jpg') || targetUrl.endsWith('.jpeg') || targetUrl.endsWith('.png') || targetUrl.endsWith('.ts') || targetUrl.endsWith('.m4s') || targetUrl.endsWith('.mp4');
+      const isM3u8 = !isSegment && (
+        targetUrl.includes('.m3u8') || 
+        targetUrl.endsWith('/index') || 
+        targetUrl.includes('/index?') || 
+        targetUrl.endsWith('/audio_0') || 
+        targetUrl.includes('/audio_0?') || 
+        contentType.includes('mpegurl') || 
+        contentType.includes('mpegURL') || 
+        contentType.includes('application/x-mpegurl')
+      );
 
       if (isM3u8) {
         let body = '';
@@ -251,9 +265,20 @@ const server = http.createServer((req, res) => {
                 return line;
               }
             }
+            if (trimmed && trimmed.startsWith('#EXT-X-MEDIA') && trimmed.includes('URI="')) {
+              return trimmed.replace(/URI="([^"]+)"/, (match, uri) => {
+                try {
+                  const absoluteUri = new URL(uri, targetUrl).href;
+                  return `URI="${proxyPrefix}${encodeURIComponent(absoluteUri)}"`;
+                } catch (e) {
+                  return match;
+                }
+              });
+            }
             return line;
           });
           const rewrittenBody = rewrittenLines.join('\n');
+          resHeaders['Content-Type'] = 'application/vnd.apple.mpegurl';
           resHeaders['Content-Length'] = Buffer.byteLength(rewrittenBody);
           res.writeHead(targetRes.statusCode, resHeaders);
           res.end(rewrittenBody);
@@ -264,8 +289,52 @@ const server = http.createServer((req, res) => {
           res.end('Decompression error: ' + err.message);
         });
       } else {
-        res.writeHead(targetRes.statusCode, resHeaders);
-        targetRes.pipe(res);
+        const isDisguisedTs = targetUrl.includes('masteplayers.com') || targetUrl.includes('/files/') || targetUrl.includes('/filesr2/') || targetUrl.endsWith('.jpg') || targetUrl.endsWith('.png');
+        if (isDisguisedTs) {
+          const chunks = [];
+          targetRes.on('data', chunk => chunks.push(chunk));
+          targetRes.on('end', () => {
+            let buffer = Buffer.concat(chunks);
+            // Check and strip fake PNG header
+            if (buffer.length > 545 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+              const iendIdx = buffer.indexOf(Buffer.from('IEND'));
+              if (iendIdx !== -1 && iendIdx + 8 < buffer.length) {
+                if (buffer[iendIdx + 8] === 0x47) {
+                  buffer = buffer.subarray(iendIdx + 8);
+                  resHeaders['Content-Type'] = 'video/mp2t';
+                }
+              }
+            } else if (buffer.length > 4 && buffer[0] === 0xFF && buffer[1] === 0xD8) { // Fake JPEG
+              const eoiIdx = buffer.indexOf(Buffer.from([0xFF, 0xD9]));
+              if (eoiIdx !== -1 && eoiIdx + 2 < buffer.length) {
+                if (buffer[eoiIdx + 2] === 0x47) {
+                  buffer = buffer.subarray(eoiIdx + 2);
+                  resHeaders['Content-Type'] = 'video/mp2t';
+                }
+              }
+            } else if (buffer.length > 188 * 3 && buffer[0] !== 0x47) {
+              // Generic scan for 0x47 TS sync byte
+              for (let i = 0; i < Math.min(2048, buffer.length - 188 * 3); i++) {
+                if (buffer[i] === 0x47 && buffer[i + 188] === 0x47 && buffer[i + 376] === 0x47) {
+                  buffer = buffer.subarray(i);
+                  resHeaders['Content-Type'] = 'video/mp2t';
+                  break;
+                }
+              }
+            }
+            resHeaders['Content-Length'] = buffer.length;
+            res.writeHead(targetRes.statusCode, resHeaders);
+            res.end(buffer);
+          });
+          targetRes.on('error', (err) => {
+            console.error('[Segment Stream Error]', err.message);
+            res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('Stream error: ' + err.message);
+          });
+        } else {
+          res.writeHead(targetRes.statusCode, resHeaders);
+          targetRes.pipe(res);
+        }
       }
     });
 

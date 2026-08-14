@@ -1,7 +1,7 @@
 @echo off
 title Update Web Video Playlists
 echo ======================================================
-echo  กำลังเรียกใช้สคริปต์อัปเดตวิดีโอ (Heedeng & Lovehee)
+echo  กำลังเรียกใช้สคริปต์อัปเดตวิดีโอ (Heedeng, Lovehee & Homhee)
 echo ======================================================
 node "%~dp0update_all.js"
 echo.

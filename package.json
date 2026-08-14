@@ -1,11 +1,12 @@
 {
   "name": "web-video-proxy",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "CORS Proxy and playlist manager for web video streaming",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "update": "node update_all.js"
+    "update": "node update_all.js",
+    "deploy": "node deploy.js"
   },
   "dependencies": {},
   "engines": {

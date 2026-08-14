@@ -10,7 +10,19 @@ import json
 import time
 import re
 import os
+import sys
+import functools
 from urllib.parse import urljoin, unquote
+
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+else:
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+
+print = functools.partial(print, flush=True)
 
 BASE_URL = "https://xn--12c1ezaww.com"
 HEADERS = {

@@ -121,6 +121,10 @@ function getBeautifulName(parsedName) {
     "Lovehee - คลิปหลุด รักหี": {
       fileName: "Lovehee.json",
       title: "Lovehee - คลิปหลุด รักหี"
+    },
+    "Homhee - คลิปหลุด หอมหี": {
+      fileName: "Homhee.json",
+      title: "Homhee - คลิปหลุด หอมหี"
     }
   };
 
@@ -440,17 +444,21 @@ async function run() {
     });
   }
 
-  // Sort descending by: Heedeng & Lovehee first, then health score, then alphabetically by name
-  finalIndex.sort((a, b) => {
-    const isHeedengA = a.file && a.file.toLowerCase().includes('heedeng');
-    const isHeedengB = b.file && b.file.toLowerCase().includes('heedeng');
-    const isLoveheeA = a.file && a.file.toLowerCase().includes('lovehee');
-    const isLoveheeB = b.file && b.file.toLowerCase().includes('lovehee');
+  function getPlaylistRank(file) {
+    const f = (file || '').toLowerCase();
+    if (f.includes('heedeng')) return 1;
+    if (f.includes('lovehee')) return 2;
+    if (f.includes('homhee')) return 3;
+    return 99;
+  }
 
-    if (isHeedengA && !isHeedengB) return -1;
-    if (isHeedengB && !isHeedengA) return 1;
-    if (isLoveheeA && !isLoveheeB) return -1;
-    if (isLoveheeB && !isLoveheeA) return 1;
+  // Sort: Top priority playlists first (Heedeng, Lovehee, Homhee), then health score desc, then name asc
+  finalIndex.sort((a, b) => {
+    const rankA = getPlaylistRank(a.file);
+    const rankB = getPlaylistRank(b.file);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
 
     const healthA = a.health !== undefined ? a.health : 100;
     const healthB = b.health !== undefined ? b.health : 100;

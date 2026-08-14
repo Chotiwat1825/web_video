@@ -984,17 +984,21 @@ function renderPlaylists(searchQuery = '') {
     list = list.filter(p => p.name.toLowerCase().includes(searchQuery));
   }
 
-  // Ensure they are sorted: Heedeng & Lovehee first, then by watchable ratio (health) descending
-  list.sort((a, b) => {
-    const isHeedengA = a.file && a.file.toLowerCase().includes('heedeng');
-    const isHeedengB = b.file && b.file.toLowerCase().includes('heedeng');
-    const isLoveheeA = a.file && a.file.toLowerCase().includes('lovehee');
-    const isLoveheeB = b.file && b.file.toLowerCase().includes('lovehee');
+  function getPlaylistRank(file) {
+    const f = (file || '').toLowerCase();
+    if (f.includes('heedeng')) return 1;
+    if (f.includes('lovehee')) return 2;
+    if (f.includes('homhee')) return 3;
+    return 99;
+  }
 
-    if (isHeedengA && !isHeedengB) return -1;
-    if (isHeedengB && !isHeedengA) return 1;
-    if (isLoveheeA && !isLoveheeB) return -1;
-    if (isLoveheeB && !isLoveheeA) return 1;
+  // Ensure they are sorted: Heedeng, Lovehee & Homhee first, then by watchable ratio (health) descending
+  list.sort((a, b) => {
+    const rankA = getPlaylistRank(a.file);
+    const rankB = getPlaylistRank(b.file);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
 
     const healthA = a.health !== undefined ? a.health : 100;
     const healthB = b.health !== undefined ? b.health : 100;
@@ -1378,9 +1382,9 @@ function createVideoCard(video, idx) {
     }, { passive: true });
   }
 
-  // Attach hover & touch listeners for Lumierecore video previews (e.g. Heedeng and Lovehee)
-  const isLumiere = getLumiereId(video.url) !== null;
-  if (isLumiere) {
+  // Attach hover & touch listeners for video previews (e.g. Heedeng, Lovehee, and Homhee)
+  const canPreview = getVideoPreviewStreamUrl(video.url) !== null;
+  if (canPreview) {
     // Desktop hover events
     card.addEventListener('mouseenter', () => {
       startHoverPreview(card, video.url);
@@ -1396,7 +1400,7 @@ function createVideoCard(video, idx) {
       startHoverPreview(card, video.url, true);
     }, { passive: true });
   } else {
-    // Touching non-lumiere card stops existing preview
+    // Touching non-preview card stops existing preview
     card.addEventListener('touchstart', () => {
       stopHoverPreview();
     }, { passive: true });
@@ -1586,7 +1590,17 @@ function openModal(video, idx) {
 
 function isEmbedUrl(url) {
   if (!url) return false;
-  return url.includes('lumierecore.com') || url.includes('xembed.club') || url.includes('/embed/') || url.includes('embed=true');
+  return (
+    url.includes('lumierecore.com') ||
+    url.includes('masteplayers.com') ||
+    url.includes('masteplayer') ||
+    url.includes('mixapi') ||
+    url.includes('xembed.club') ||
+    url.includes('/embed/') ||
+    url.includes('/play/') ||
+    url.includes('/e/') ||
+    url.includes('embed=true')
+  );
 }
 
 function playStream(url, startTime = 0) {
@@ -1825,8 +1839,8 @@ function renderRelated(current) {
       <div class="related-title">${escHtml(v.name)}</div>
     `;
 
-    const isLumiere = getLumiereId(v.url) !== null;
-    if (isLumiere) {
+    const canPreview = getVideoPreviewStreamUrl(v.url) !== null;
+    if (canPreview) {
       // Desktop hover events
       card.addEventListener('mouseenter', () => {
         startHoverPreview(card, v.url);
@@ -1863,10 +1877,25 @@ let activeHoverPreview = {
   videoEl: null
 };
 
-function getLumiereId(url) {
+function getVideoPreviewStreamUrl(url) {
   if (!url) return null;
-  const match = url.match(/lumierecore\.com\/([a-zA-Z0-9\-]+)/);
-  return match ? match[1] : null;
+  // 1. Lumierecore (Heedeng, Lovehee)
+  const matchLumiere = url.match(/lumierecore\.com\/([a-zA-Z0-9\-]+)/);
+  if (matchLumiere) {
+    const videoId = matchLumiere[1];
+    return `https://lumierecore.com/media/${videoId}/${videoId}_360p.m3u8?t=${Date.now()}`;
+  }
+  // 2. Masteplayers (Homhee)
+  const matchMaste = url.match(/masteplayers\.com\/(?:embed|e|files|filesr2|hlsr2)\/([a-f0-9\-]+)/);
+  if (matchMaste) {
+    const videoId = matchMaste[1];
+    return `https://masteplayers.com/hlsr2/${videoId}/master.m3u8?t=${Date.now()}`;
+  }
+  // 3. Direct HLS or MP4 stream
+  if (url.includes('.m3u8') || url.includes('.mp4')) {
+    return url;
+  }
+  return null;
 }
 
 function getProxiedUrl(url) {
@@ -1886,8 +1915,8 @@ function startHoverPreview(card, videoUrl, immediate = false) {
   // Clear any existing preview from another card first
   stopHoverPreview();
 
-  const videoId = getLumiereId(videoUrl);
-  if (!videoId) return;
+  const streamUrl = getVideoPreviewStreamUrl(videoUrl);
+  if (!streamUrl) return;
 
   activeHoverPreview.card = card;
 
@@ -1909,9 +1938,8 @@ function startHoverPreview(card, videoUrl, immediate = false) {
     thumb.appendChild(videoEl);
     activeHoverPreview.videoEl = videoEl;
 
-    // Use 360p low-res stream for fast preview
+    // Use low-res/master stream for fast preview
     // Append unique cache-busting timestamp to bypass browser's cached corrupt responses
-    const streamUrl = `https://lumierecore.com/media/${videoId}/${videoId}_360p.m3u8?t=${Date.now()}`;
     const proxiedUrl = getProxiedUrl(streamUrl);
 
     const onPlaySuccess = () => {
