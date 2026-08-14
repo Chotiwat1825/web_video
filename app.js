@@ -310,11 +310,19 @@ function setupEventListeners() {
   });
   DOM.videoPlayer.addEventListener('error', () => {
     DOM.playerLoading.classList.remove('show');
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      showToast('⚠️ CORS ถูกบล็อกโดย GitHub Pages แนะนำให้เปิดส่วนขยาย "Allow CORS" หรือใช้งานผ่าน localhost:3000');
-    } else {
-      showToast('⚠️ ไม่สามารถเล่นไฟล์สตรีมมิ่งนี้ได้ หรือลิงก์หมดอายุ');
+    // If playing an MP4 or direct video directly failed, try proxy fallback once if not already proxied
+    const currentSrc = DOM.videoPlayer.src || '';
+    if (state.currentVideo && state.currentVideo.url && !currentSrc.includes('/proxy?url=')) {
+      const proxied = getProxiedUrl(state.currentVideo.url);
+      if (proxied && proxied !== currentSrc) {
+        console.log('[VideoPlayer] Direct playback error, attempting fallback to proxy:', proxied);
+        DOM.videoPlayer.src = proxied;
+        DOM.videoPlayer.load();
+        DOM.videoPlayer.play().catch(() => {});
+        return;
+      }
     }
+    showToast('⚠️ ไม่สามารถเล่นไฟล์สตรีมมิ่งนี้ได้ หรือลิงก์อาจหมดอายุ');
   });
 
   // Logo resets to "all"
@@ -1621,25 +1629,20 @@ function playStream(url, startTime = 0) {
     setIframeSource('about:blank');
   }
 
-  // Wrap external stream URLs with local or remote CORS proxy
-  let playUrl = url;
-  if (url.startsWith('http')) {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const proxyBase = isLocal ? window.location.origin : 'https://web-video-9un8.onrender.com';
-    if (!url.startsWith(window.location.origin)) {
-      playUrl = `${proxyBase}/proxy?url=${encodeURIComponent(url)}`;
-    }
-  }
-
-  const isHls = url.includes('.m3u8') || url.includes('/playlist');
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const isHls = url.includes('.m3u8') || url.includes('/playlist') || url.includes('master.m3u8');
 
   if (isHls) {
+    // If local or masteplayers (requires segment de-obfuscation), use proxy. On GitHub Pages, try direct first with fallback.
+    const proxiedUrl = getProxiedUrl(url);
+    const initialHlsUrl = (isLocal || url.includes('masteplayers.com')) ? proxiedUrl : url;
+
     if (Hls.isSupported()) {
       state.hlsInstance = new Hls({
         maxMaxBufferLength: 15,
         enableWorker: true
       });
-      state.hlsInstance.loadSource(playUrl);
+      state.hlsInstance.loadSource(initialHlsUrl);
       state.hlsInstance.attachMedia(DOM.videoPlayer);
       state.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
         if (startTime > 0) {
@@ -1647,17 +1650,25 @@ function playStream(url, startTime = 0) {
         }
         DOM.videoPlayer.play().catch(() => {});
       });
+
       let networkErrorCount = 0;
+      let triedProxyFallback = (initialHlsUrl === proxiedUrl);
+
       state.hlsInstance.on(Hls.Events.ERROR, function (event, data) {
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
           networkErrorCount++;
+          // Fallback to proxy if direct failed
+          if (!triedProxyFallback && data.fatal) {
+            triedProxyFallback = true;
+            console.log('[HLS] Network error on direct URL, falling back to proxy:', proxiedUrl);
+            state.hlsInstance.loadSource(proxiedUrl);
+            state.hlsInstance.startLoad();
+            return;
+          }
+
           if (networkErrorCount >= 3) {
             DOM.playerLoading.classList.remove('show');
-            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-              showToast('⚠️ CORS ถูกบล็อกโดย GitHub Pages แนะนำให้เปิดส่วนขยาย "Allow CORS" หรือใช้งานผ่าน localhost:3000');
-            } else {
-              showToast('⚠️ ไม่สามารถเชื่อมต่อสตรีมมิ่งได้ หรือลิงก์อาจหมดอายุ');
-            }
+            showToast('⚠️ ไม่สามารถเชื่อมต่อสตรีมมิ่งได้ หรือลิงก์อาจหมดอายุ');
             if (state.hlsInstance) {
               state.hlsInstance.destroy();
               state.hlsInstance = null;
@@ -1673,7 +1684,7 @@ function playStream(url, startTime = 0) {
       });
     } else if (DOM.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
       // Native Apple HLS streaming (Safari / iOS)
-      DOM.videoPlayer.src = playUrl;
+      DOM.videoPlayer.src = initialHlsUrl;
       DOM.videoPlayer.load();
       if (startTime > 0) {
         const onMetadata = () => {
@@ -1688,8 +1699,8 @@ function playStream(url, startTime = 0) {
       showToast(getIcon('warning') + ' <span>เบราว์เซอร์ของคุณไม่รองรับการเล่นไฟล์ HLS (.m3u8)</span>');
     }
   } else {
-    // Normal MP4 file playback
-    DOM.videoPlayer.src = playUrl;
+    // Normal MP4 file playback - play directly via HTML5 video tag (native non-CORS streaming)
+    DOM.videoPlayer.src = url;
     DOM.videoPlayer.load();
     if (startTime > 0) {
       const onMetadata = () => {
@@ -1949,36 +1960,11 @@ function startHoverPreview(card, videoUrl, immediate = false) {
       card.classList.add('preview-active');
     };
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        maxMaxBufferLength: 5,
-        enableWorker: true
-      });
-      activeHoverPreview.hls = hls;
-      hls.loadSource(proxiedUrl);
-      hls.attachMedia(videoEl);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        videoEl.play()
-          .then(onPlaySuccess)
-          .catch(err => {
-            console.warn('Preview autoplay blocked:', err);
-            card.classList.remove('preview-loading');
-          });
-      });
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          console.warn('Hls error during preview:', data);
-          if (data.details === 'manifestParsingError' && data.networkDetails && data.networkDetails.response) {
-            console.log('--- Preview Response Sample ---');
-            console.log(data.networkDetails.response.slice(0, 500));
-            console.log('-------------------------------');
-          }
-          stopHoverPreview();
-        }
-      });
-    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native Apple HLS (Safari)
-      videoEl.src = proxiedUrl;
+    const isPreviewHls = streamUrl.includes('.m3u8') || streamUrl.includes('/playlist');
+
+    if (!isPreviewHls) {
+      // Direct MP4 preview - native video tag
+      videoEl.src = streamUrl;
       const playHandler = () => {
         videoEl.play()
           .then(onPlaySuccess)
@@ -1989,6 +1975,52 @@ function startHoverPreview(card, videoUrl, immediate = false) {
         videoEl.removeEventListener('loadedmetadata', playHandler);
       };
       videoEl.addEventListener('loadedmetadata', playHandler);
+      videoEl.load();
+    } else {
+      // HLS preview
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const proxiedUrl = (isLocal || streamUrl.includes('masteplayers.com')) ? getProxiedUrl(streamUrl) : streamUrl;
+
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          maxMaxBufferLength: 5,
+          enableWorker: true
+        });
+        activeHoverPreview.hls = hls;
+        hls.loadSource(proxiedUrl);
+        hls.attachMedia(videoEl);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoEl.play()
+            .then(onPlaySuccess)
+            .catch(err => {
+              console.warn('Preview autoplay blocked:', err);
+              card.classList.remove('preview-loading');
+            });
+        });
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR && proxiedUrl === streamUrl) {
+              hls.loadSource(getProxiedUrl(streamUrl));
+              return;
+            }
+            console.warn('Hls error during preview:', data);
+            stopHoverPreview();
+          }
+        });
+      } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native Apple HLS (Safari)
+        videoEl.src = proxiedUrl;
+        const playHandler = () => {
+          videoEl.play()
+            .then(onPlaySuccess)
+            .catch(err => {
+              console.warn('Preview autoplay blocked:', err);
+              card.classList.remove('preview-loading');
+            });
+          videoEl.removeEventListener('loadedmetadata', playHandler);
+        };
+        videoEl.addEventListener('loadedmetadata', playHandler);
+      }
     }
   };
 

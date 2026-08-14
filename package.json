@@ -1,6 +1,6 @@
 {
   "name": "web-video-proxy",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "CORS Proxy and playlist manager for web video streaming",
   "main": "server.js",
   "scripts": {
