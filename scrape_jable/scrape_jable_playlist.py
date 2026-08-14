@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-High-Performance Async Playwright Resolver for Jable Playlists
+Stable Async Playwright Resolver for Jable Playlists
 - Resolves .m3u8 stream URLs, titles, and preview thumbnails for Jable videos
 - Supports 4_JAV_Update.json, 18_JAV_MIX_1.json, 19_JAV_MIX_2.json, or any playlist
-- 8 concurrent browser workers for maximum speed (~10-15 videos / sec)
+- 4 concurrent browser workers with Cloudflare challenge auto-handling
 - Caches all resolved and dead links to progress.json
-- Automatically deduplicates and cleans up playlists
+- Automatically syncs and saves progress to playlist files
 """
 
 import os
@@ -27,7 +27,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAYLISTS_DIR = os.path.join(ROOT_DIR, 'playlists')
 PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'progress.json')
 
-CONCURRENCY = 8
+CONCURRENCY = 4
 
 def load_json(file_path):
     if not os.path.exists(file_path):
@@ -79,25 +79,30 @@ async def scrape_single_video(context, station, progress_cache, sem, stats):
 
             async def route_filter(route):
                 rtype = route.request.resource_type
-                u = route.request.url
-                if rtype in ["image", "media", "font", "stylesheet"]:
-                    await route.abort()
-                elif any(ad in u for ad in ["google", "syndication", "exosrv", "magsrv", "adxadserv", "labadena", "tapioni"]):
+                if rtype in ["image", "media", "font"]:
                     await route.abort()
                 else:
                     await route.continue_()
 
             await page.route("**/*", route_filter)
 
-            await page.goto(original_url, wait_until="domcontentloaded", timeout=18000)
-            content = await page.content()
+            await page.goto(original_url, wait_until="domcontentloaded", timeout=25000)
+            page_title = await page.title()
 
+            # Handle Cloudflare challenge if triggered
+            if "Just a moment" in page_title or "Attention Required" in page_title:
+                for _ in range(6):
+                    await page.wait_for_timeout(1500)
+                    page_title = await page.title()
+                    if "Just a moment" not in page_title:
+                        break
+
+            content = await page.content()
             hls_match = re.search(r"var\s+hlsUrl\s*=\s*['\"]([^'\"]+)['\"]", content)
             title_match = re.search(r"<meta\s+property=[\"']og:title[\"']\s+content=[\"']([^\"']+)[\"']", content)
             image_match = re.search(r"<meta\s+property=[\"']og:image[\"']\s+content=[\"']([^\"']+)[\"']", content)
-            page_title = await page.title()
 
-            is_404 = "404" in page_title or "頁面丟失" in page_title or "丟失" in content
+            is_404 = "404" in page_title or "頁面丟失" in page_title or "丟失" in content or "Access denied" in page_title
 
             if hls_match:
                 m3u8_url = hls_match.group(1)
@@ -130,10 +135,12 @@ async def scrape_single_video(context, station, progress_cache, sem, stats):
                     'resolved_at': time.time()
                 }
                 stats['dead'] += 1
-                print(f"[DEAD 404] {code} ({original_url})")
+                print(f"[DEAD] {code} ({original_url})")
             else:
                 stats['failed'] += 1
-                print(f"[FAILED] {code} (No stream found on {original_url})")
+                print(f"[FAILED] {code} ({original_url})")
+
+            await asyncio.sleep(0.15)
 
         except Exception as e:
             stats['error'] += 1
@@ -220,7 +227,7 @@ async def resolve_playlist_file(file_path, limit=None):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
 
-        batch_size = 40
+        batch_size = 25
         for i in range(0, len(targets), batch_size):
             chunk = targets[i:i + batch_size]
             t_chunk_start = time.time()
@@ -257,9 +264,9 @@ async def main():
 
     if not target_files:
         target_files = [
-            os.path.join(PLAYLISTS_DIR, '4_JAV_Update.json'),
+            os.path.join(PLAYLISTS_DIR, '19_JAV_MIX_2.json'),
             os.path.join(PLAYLISTS_DIR, '18_JAV_MIX_1.json'),
-            os.path.join(PLAYLISTS_DIR, '19_JAV_MIX_2.json')
+            os.path.join(PLAYLISTS_DIR, '4_JAV_Update.json')
         ]
 
     for f in target_files:
