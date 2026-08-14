@@ -14,106 +14,6 @@ function getBeautifulName(parsedName) {
   const name = parsedName.trim();
   
   const mappings = {
-    "All": {
-      fileName: "av24flix_รวมวิดีโอทั้งหมด.json",
-      title: "av24flix - รวมวิดีโอทั้งหมด"
-    },
-    "Asia - หนังเอเชีย": {
-      fileName: "av24flix_หนังเอเชีย.json",
-      title: "av24flix - หนังเอเชีย"
-    },
-    "Japan - หนังญี่ปุ่น": {
-      fileName: "av24flix_หนังญี่ปุ่น.json",
-      title: "av24flix - หนังญี่ปุ่น"
-    },
-    "Thai - หนังไทย": {
-      fileName: "av24flix_หนังไทย.json",
-      title: "av24flix - หนังไทย"
-    },
-    "Western - หนังฝรั่ง": {
-      fileName: "av24flix_หนังฝรั่ง.json",
-      title: "av24flix - หนังฝรั่ง"
-    },
-    "av24flix": {
-      fileName: "av24flix_เมนูหลัก.json",
-      title: "av24flix - เมนูหลัก"
-    },
-    "AV UNCENSORED": {
-      fileName: "AV_ไม่เซนเซอร์_jav69xxx.json",
-      title: "AV Uncensored (ไม่เซนเซอร์ - jav69xxx)"
-    },
-    "EXTINF": {
-      fileName: "AV_ซับไทย_Samorn_Team.json",
-      title: "AV ซับไทย - Samorn Team"
-    },
-    "💖Good for heart💋GEN2": {
-      fileName: "ตู้กับข้าว_Good_for_heart_Gen2.json",
-      title: "ตู้กับข้าว - Good for heart Gen2"
-    },
-    "H-Anime [ซับไทย]": {
-      fileName: "ตู้นกบิน_H-Anime_ซับไทย.json",
-      title: "ตู้นกบิน - H-Anime ซับไทย"
-    },
-    "💖JAV💖": {
-      fileName: "ตู้เอก_JAV_แอนิเมะ.json",
-      title: "ตู้เอก - JAV & Anime"
-    },
-    "💖JAV ALL STARS💖": {
-      fileName: "ตู้AllStars_JAV.json",
-      title: "ตู้ All Stars - JAV"
-    },
-    "JAV_ SUBTHAI_2": {
-      fileName: "ตู้ที่2_JAV_SUBTHAI_2.json",
-      title: "ตู้ที่ 2 - JAV ซับไทย"
-    },
-    "JAV SUBTHAI_3": {
-      fileName: "ตู้ที่3_JAV_SUBTHAI_3.json",
-      title: "ตู้ที่ 3 - JAV ซับไทย"
-    },
-    "JAV_UNCENSORED": {
-      fileName: "ตู้Uncensored_JAV.json",
-      title: "ตู้ Uncensored - JAV ไม่เซนเซอร์"
-    },
-    "JAV_UPDATE_2": {
-      fileName: "JAV_อัปเดต_ชุดที่2.json",
-      title: "JAV อัปเดต - ชุดที่ 2"
-    },
-    "JAV_UPDATE_3": {
-      fileName: "JAV_อัปเดต_ชุดที่3.json",
-      title: "JAV อัปเดต - ชุดที่ 3"
-    },
-    "JAV_UPDATE_4": {
-      fileName: "JAV_อัปเดต_ชุดที่4.json",
-      title: "JAV อัปเดต - ชุดที่ 4"
-    },
-    "JAV_UPDATE_5": {
-      fileName: "JAV_อัปเดต_ชุดที่5.json",
-      title: "JAV อัปเดต - ชุดที่ 5"
-    },
-    "JAV_UPDATE_6": {
-      fileName: "JAV_อัปเดต_ชุดที่6.json",
-      title: "JAV อัปเดต - ชุดที่ 6"
-    },
-    "JAV อัพเดท4ส.ค/66": {
-      fileName: "JAV_อัปเดต_4สค66.json",
-      title: "JAV อัปเดต - 4 ส.ค. 66"
-    },
-    "SEXY": {
-      fileName: "ตู้กาแฟ_SEXY.json",
-      title: "ตู้กาแฟ - SEXY"
-    },
-    "ตู้นานาชาติ": {
-      fileName: "ตู้นานาชาติ_International.json",
-      title: "ตู้นานาชาติ (International)"
-    },
-    "ตู้ปันสุข 🔞": {
-      fileName: "ตู้ปันสุข_เมนูหลัก.json",
-      title: "ตู้ปันสุข 🔞 (เมนูหลัก)"
-    },
-    "เรท อาร์": {
-      fileName: "ตู้เรทอาร์_RATE_R.json",
-      title: "ตู้เรทอาร์ (Rate R)"
-    },
     "Heedeng - คลิปหลุด OnlyFans": {
       fileName: "Heedeng.json",
       title: "Heedeng - คลิปหลุด OnlyFans"
@@ -125,6 +25,46 @@ function getBeautifulName(parsedName) {
     "Homhee - คลิปหลุด หอมหี": {
       fileName: "Homhee.json",
       title: "Homhee - คลิปหลุด หอมหี"
+    },
+    "JAV อัปเดต - 4 ส.ค. 66": {
+      fileName: "JAV_อัปเดต_-_4_ส_ค_66.json",
+      title: "JAV อัปเดต - 4 ส.ค. 66"
+    },
+    "JAV อัพเดท4ส.ค/66": {
+      fileName: "JAV_อัปเดต_-_4_ส_ค_66.json",
+      title: "JAV อัปเดต - 4 ส.ค. 66"
+    },
+    "4__JAV_Update": {
+      fileName: "4_JAV_Update.json",
+      title: "4__JAV_Update"
+    },
+    "4_JAV_Update": {
+      fileName: "4_JAV_Update.json",
+      title: "4__JAV_Update"
+    },
+    "18_JAV_MIX_1": {
+      fileName: "18_JAV_MIX_1.json",
+      title: "18_JAV_MIX_1"
+    },
+    "19_JAV_MIX_2": {
+      fileName: "19_JAV_MIX_2.json",
+      title: "19_JAV_MIX_2"
+    },
+    "9__JAV_SubThai_3": {
+      fileName: "9_JAV_SubThai_3.json",
+      title: "9__JAV_SubThai_3"
+    },
+    "9_JAV_SubThai_3": {
+      fileName: "9_JAV_SubThai_3.json",
+      title: "9__JAV_SubThai_3"
+    },
+    "จากเว็ป av24flix": {
+      fileName: "จากเว็ป_av24flix.json",
+      title: "จากเว็ป av24flix"
+    },
+    "JAV": {
+      fileName: "JAV.json",
+      title: "JAV"
     }
   };
 
