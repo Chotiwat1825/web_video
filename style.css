@@ -1709,6 +1709,7 @@ mark.search-highlight {
   border-color: rgba(229,9,20,0.3);
 }
 .related-thumb {
+  position: relative;
   aspect-ratio: 16/10;
   overflow: hidden;
   background: #1a1a28;
@@ -2679,7 +2680,8 @@ body {
   transform: scale(0) !important;
   pointer-events: none;
 }
-.preview-loading .card-thumb::after {
+.preview-loading .card-thumb::after,
+.preview-loading .related-thumb::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -2689,7 +2691,8 @@ body {
   background: rgba(255,255,255,0.2);
   z-index: 15;
 }
-.preview-loading .card-thumb::before {
+.preview-loading .card-thumb::before,
+.preview-loading .related-thumb::before {
   content: '';
   position: absolute;
   bottom: 0;

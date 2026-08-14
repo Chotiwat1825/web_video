@@ -1803,12 +1803,17 @@ function renderRelated(current) {
     return { video: v, score };
   });
 
-  // Sort candidates by score descending and pick the top 8
+  // Sort candidates by score descending and pick the top 12
   scored.sort((a, b) => b.score - a.score);
-  const pool = scored.slice(0, 8).map(item => item.video);
+  const pool = scored.slice(0, 12).map(item => item.video);
 
-  DOM.relatedGrid.innerHTML = pool.map((v, i) => `
-    <div class="related-card" onclick="openModal(state.filteredVideos[${state.filteredVideos.indexOf(v)}], ${state.filteredVideos.indexOf(v)})">
+  DOM.relatedGrid.innerHTML = '';
+  pool.forEach(v => {
+    const videoIdx = state.filteredVideos.indexOf(v);
+    const card = document.createElement('div');
+    card.className = 'related-card';
+    card.setAttribute('data-url', v.url);
+    card.innerHTML = `
       <div class="related-thumb">
         <img
           src="${escHtml(v.image || '')}"
@@ -1818,8 +1823,36 @@ function renderRelated(current) {
         />
       </div>
       <div class="related-title">${escHtml(v.name)}</div>
-    </div>
-  `).join('');
+    `;
+
+    const isLumiere = getLumiereId(v.url) !== null;
+    if (isLumiere) {
+      // Desktop hover events
+      card.addEventListener('mouseenter', () => {
+        startHoverPreview(card, v.url);
+      });
+      card.addEventListener('mouseleave', () => {
+        stopHoverPreview();
+      });
+
+      // Mobile touch events: Start preview immediately on touch/scroll
+      card.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 1) return;
+        startHoverPreview(card, v.url, true);
+      }, { passive: true });
+    } else {
+      card.addEventListener('touchstart', () => {
+        stopHoverPreview();
+      }, { passive: true });
+    }
+
+    card.addEventListener('click', () => {
+      stopHoverPreview();
+      openModal(v, videoIdx);
+    });
+
+    DOM.relatedGrid.appendChild(card);
+  });
 }
 
 // ── Hover Card Video Previews ──────────────────────────
@@ -1859,7 +1892,7 @@ function startHoverPreview(card, videoUrl, immediate = false) {
   activeHoverPreview.card = card;
 
   const runPreview = () => {
-    const thumb = card.querySelector('.card-thumb');
+    const thumb = card.querySelector('.card-thumb, .related-thumb');
     if (!thumb) return;
 
     card.classList.add('preview-loading'); // Show loading line animation
