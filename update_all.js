@@ -39,8 +39,12 @@ runCommand('python scrape_homhee_update.py', 'scrape_homhee');
 console.log('--- [6/7] กำลังแปลงข้อมูลเพลย์ลิสต์ Homhee ---');
 runCommand('node convert_homhee.js', '.');
 
-// 7. รวบรวมและอัปเดตดัชนีเพลย์ลิสต์ทั้งหมด
-console.log('--- [7/7] กำลังรวมเพลย์ลิสต์และสร้างดัชนีใหม่ ---');
+// 7. อัปเดตข้อมูล Jable (4_JAV_Update)
+console.log('--- [7/8] กำลังอัปเดตข้อมูลวิดีโอ Jable ---');
+runCommand('python scrape_jable_update.py 2', 'scrape_jable');
+
+// 8. รวบรวมและอัปเดตดัชนีเพลย์ลิสต์ทั้งหมด
+console.log('--- [8/8] กำลังรวมเพลย์ลิสต์และสร้างดัชนีใหม่ ---');
 runCommand('node convert_playlists.js', '.');
 
 console.log('=== อัปเดตข้อมูลเพลย์ลิสต์เสร็จสิ้นสมบูรณ์! ===');

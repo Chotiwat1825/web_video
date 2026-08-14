@@ -2346,9 +2346,11 @@ body {
   border-radius: 99px;
   padding: 11px 18px 11px 42px;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 

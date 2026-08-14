@@ -269,6 +269,16 @@ function setupEventListeners() {
     clearBtn.addEventListener('click', () => clearSearch());
   }
 
+  // Click on search wrapper or icon to focus input
+  const searchWrap = document.querySelector('.search-wrap');
+  if (searchWrap && DOM.searchInput) {
+    searchWrap.addEventListener('click', (e) => {
+      if (e.target !== DOM.searchInput && e.target !== clearBtn && (!clearBtn || !clearBtn.contains(e.target))) {
+        DOM.searchInput.focus();
+      }
+    });
+  }
+
   // Keyboard shortcut: '/' or Ctrl+K → focus desktop search
   document.addEventListener('keydown', (e) => {
     const tag = e.target.tagName;
@@ -1873,9 +1883,9 @@ function playStream(url, startTime = 0) {
   const isHls = url.includes('.m3u8') || url.includes('/playlist') || url.includes('master.m3u8');
 
   if (isHls) {
-    // If local or masteplayers (requires segment de-obfuscation), use proxy. On GitHub Pages, try direct first with fallback.
+    // If local, masteplayers, or mushroomtrack/maplecache, use proxy. On GitHub Pages, try direct first with fallback.
     const proxiedUrl = getProxiedUrl(url);
-    const initialHlsUrl = (isLocal || url.includes('masteplayers.com')) ? proxiedUrl : url;
+    const initialHlsUrl = (isLocal || url.includes('masteplayers.com') || url.includes('mushroomtrack.com') || url.includes('maplecache.com')) ? proxiedUrl : url;
 
     if (Hls.isSupported()) {
       state.hlsInstance = new Hls({
@@ -2259,7 +2269,7 @@ function startHoverPreview(card, videoUrl, immediate = false) {
     } else {
       // HLS preview
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const proxiedUrl = (isLocal || streamUrl.includes('masteplayers.com')) ? getProxiedUrl(streamUrl) : streamUrl;
+      const proxiedUrl = (isLocal || streamUrl.includes('masteplayers.com') || streamUrl.includes('mushroomtrack.com') || streamUrl.includes('maplecache.com')) ? getProxiedUrl(streamUrl) : streamUrl;
 
       if (Hls.isSupported()) {
         const hls = new Hls({
@@ -2599,7 +2609,7 @@ function clearRecentSearches() {
   searchPanel.id = 'tab-search-panel';
   searchPanel.innerHTML = `
     <div class="tab-search-panel-row">
-      <div class="tab-search-panel-input-wrap">
+      <div class="tab-search-panel-input-wrap" id="tab-search-input-wrap">
         <svg viewBox="0 0 24 24" class="tab-search-panel-icon"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         <input
           type="search"
@@ -2608,6 +2618,8 @@ function clearRecentSearches() {
           placeholder="ค้นหาวิดีโอ..."
           autocomplete="off"
           autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
           enterkeyhint="search"
         />
       </div>
@@ -2631,6 +2643,13 @@ function clearRecentSearches() {
   // Wire search tab input → main search logic (with debounce)
   const tabSearchInput = document.getElementById('tab-search-input');
   const suggestionBox  = document.getElementById('tab-search-suggestions');
+  const inputWrap      = document.getElementById('tab-search-input-wrap');
+
+  if (inputWrap && tabSearchInput) {
+    inputWrap.addEventListener('click', () => {
+      tabSearchInput.focus();
+    });
+  }
 
   function renderSearchSuggestions(query) {
     if (!suggestionBox) return;
@@ -2695,6 +2714,35 @@ function clearRecentSearches() {
     tabSearchInput.addEventListener('focus', () => {
       renderSearchSuggestions(tabSearchInput.value.trim().toLowerCase());
     });
+    tabSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const value = tabSearchInput.value.trim();
+        state.searchQuery = value.toLowerCase();
+        if (state.searchQuery) saveRecentSearch(state.searchQuery);
+        if (DOM.searchInput) DOM.searchInput.value = value;
+        const clearBtn = document.getElementById('search-clear-btn');
+        if (clearBtn) clearBtn.classList.toggle('visible', value.length > 0);
+        applyFilter();
+        tabSearchInput.blur();
+        closeTabOverlays();
+        setTabActive('home');
+      }
+    });
+  }
+
+  // Pre-focus trigger on touch/pointer down for zero-delay keyboard pop
+  const tabSearchBtn = document.getElementById('tab-search');
+  if (tabSearchBtn) {
+    const triggerSearchFocus = () => {
+      const panel = document.getElementById('tab-search-panel');
+      const isPanelOpen = panel && panel.classList.contains('open');
+      if (!isPanelOpen && tabSearchInput) {
+        tabSearchInput.focus({ preventScroll: true });
+      }
+    };
+    tabSearchBtn.addEventListener('pointerdown', triggerSearchFocus, { passive: true });
+    tabSearchBtn.addEventListener('touchstart', triggerSearchFocus, { passive: true });
   }
 
   // Close button
@@ -2889,10 +2937,27 @@ function switchTab(tabId) {
         setTabActive('search');
         if (panel)    panel.classList.add('open');
         if (backdrop) backdrop.classList.add('open');
-        // Auto-focus the search input
+        
+        // Immediate synchronous focus in user gesture stack (vital for iOS / Android keyboard popup)
+        if (tabInput) {
+          tabInput.focus({ preventScroll: true });
+          try {
+            const len = tabInput.value.length;
+            tabInput.setSelectionRange(len, len);
+          } catch (_) {}
+        }
+
+        // Secondary fallback micro-delays to ensure focus persistence across all rendering engines
+        requestAnimationFrame(() => {
+          if (tabInput && document.activeElement !== tabInput) {
+            tabInput.focus({ preventScroll: true });
+          }
+        });
         setTimeout(() => {
-          if (tabInput) tabInput.focus();
-        }, 120);
+          if (tabInput && document.activeElement !== tabInput) {
+            tabInput.focus({ preventScroll: true });
+          }
+        }, 50);
       }
       break;
 

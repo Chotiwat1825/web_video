@@ -201,6 +201,12 @@ const server = http.createServer((req, res) => {
     headers['Accept-Encoding'] = 'identity'; // Force uncompressed response to bypass any zlib issues
     if (req.headers['accept-language']) headers['Accept-Language'] = req.headers['accept-language'];
 
+    // Provider-specific headers
+    if (targetUrl.includes('mushroomtrack.com') || targetUrl.includes('maplecache.com') || targetUrl.includes('jable.tv')) {
+      headers['Referer'] = 'https://jable.tv/';
+      headers['Origin'] = 'https://jable.tv';
+    }
+
     const agent = parsedTarget.protocol === 'https:' ? new https.Agent({ rejectUnauthorized: false }) : null;
 
     const targetReq = client.get(targetUrl, { headers, agent }, (targetRes) => {
@@ -266,7 +272,7 @@ const server = http.createServer((req, res) => {
                 return line;
               }
             }
-            if (trimmed && trimmed.startsWith('#EXT-X-MEDIA') && trimmed.includes('URI="')) {
+            if (trimmed && (trimmed.startsWith('#EXT-X-MEDIA') || trimmed.startsWith('#EXT-X-KEY')) && trimmed.includes('URI="')) {
               return trimmed.replace(/URI="([^"]+)"/, (match, uri) => {
                 try {
                   const absoluteUri = new URL(uri, targetUrl).href;
