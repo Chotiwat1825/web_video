@@ -41,12 +41,28 @@ def load_json(file_path):
 
 def save_json(file_path, data):
     tmp_path = file_path + '.tmp'
-    with open(tmp_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    if os.path.exists(file_path):
-        os.replace(tmp_path, file_path)
-    else:
-        os.rename(tmp_path, file_path)
+    try:
+        with open(tmp_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        for attempt in range(5):
+            try:
+                if os.path.exists(file_path):
+                    os.replace(tmp_path, file_path)
+                else:
+                    os.rename(tmp_path, file_path)
+                return
+            except OSError:
+                time.sleep(0.15)
+        # Fallback to direct write
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+    except Exception as e:
+        print(f"[Warn] Could not save {file_path}: {e}")
 
 def extract_code(text):
     if not text:
@@ -102,7 +118,8 @@ async def scrape_single_video(context, station, progress_cache, sem, stats):
             title_match = re.search(r"<meta\s+property=[\"']og:title[\"']\s+content=[\"']([^\"']+)[\"']", content)
             image_match = re.search(r"<meta\s+property=[\"']og:image[\"']\s+content=[\"']([^\"']+)[\"']", content)
 
-            is_404 = "404" in page_title or "頁面丟失" in page_title or "丟失" in content or "Access denied" in page_title
+            is_cf = "Cloudflare" in page_title or "Access denied" in page_title or "Just a moment" in page_title
+            is_404 = not is_cf and ("404" in page_title or "頁面丟失" in page_title or "頁面不存在" in page_title)
 
             if hls_match:
                 m3u8_url = hls_match.group(1)
@@ -135,12 +152,15 @@ async def scrape_single_video(context, station, progress_cache, sem, stats):
                     'resolved_at': time.time()
                 }
                 stats['dead'] += 1
-                print(f"[DEAD] {code} ({original_url})")
+                print(f"[DEAD 404] {code} ({original_url})")
+            elif is_cf:
+                stats['failed'] += 1
+                print(f"[CF CHALLENGE] {code} - bypassed for later retry")
             else:
                 stats['failed'] += 1
                 print(f"[FAILED] {code} ({original_url})")
 
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.2)
 
         except Exception as e:
             stats['error'] += 1
