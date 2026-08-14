@@ -1845,7 +1845,12 @@ function getProxiedUrl(url) {
 }
 
 function startHoverPreview(card, videoUrl, immediate = false) {
-  // Clear any existing preview first
+  // If this card is already previewing or loading, don't restart it
+  if (activeHoverPreview.card === card) {
+    return;
+  }
+
+  // Clear any existing preview from another card first
   stopHoverPreview();
 
   const videoId = getLumiereId(videoUrl);
