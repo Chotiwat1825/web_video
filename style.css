@@ -1078,29 +1078,96 @@ body.in-pseudo-fullscreen {
   visibility: hidden;
 }
 
-.player-progress-tooltip {
+/* ── Floating Seek Thumbnail Preview Card above seekbar ── */
+.player-preview-card {
   position: absolute;
-  bottom: 26px;
+  bottom: 28px;
+  left: 16px;
+  transform: translate(-50%, 6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+  z-index: 25;
+}
+.player-progress-wrap:hover .player-preview-card,
+.player-progress-wrap.scrubbing .player-preview-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+.player-preview-media {
+  position: relative;
+  width: 160px;
+  height: 90px;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+.player-preview-poster,
+.player-preview-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.player-preview-poster {
+  z-index: 1;
+  filter: brightness(0.85);
+  background: #111;
+}
+.player-preview-canvas {
+  z-index: 2;
+}
+.player-preview-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin-clockwise 0.8s linear infinite;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.player-preview-card.loading .player-preview-spinner {
+  opacity: 1;
+}
+.player-preview-time {
+  margin-top: 6px;
   background: rgba(15, 15, 15, 0.95);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: #fff;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 10;
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  transform: translate(-50%, 4px);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
-.player-progress-wrap:hover .player-progress-tooltip,
-.player-progress-wrap.scrubbing .player-progress-tooltip {
-  opacity: 1;
-  transform: translate(-50%, 0);
+@media (max-width: 640px) {
+  .player-preview-media {
+    width: 120px;
+    height: 68px;
+  }
+}
+
+.player-progress-tooltip {
+  display: none !important;
 }
 /* invisible range input on top */
 .player-seek {
