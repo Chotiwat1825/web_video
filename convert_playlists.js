@@ -220,13 +220,19 @@ function parseJSON(text) {
 
   return groups.map(g => ({
     name: g.name || 'ทั่วไป',
-    stations: (g.stations || []).map(s => ({
-      name: s.name || 'ไม่มีชื่อ',
-      image: s.image || '',
-      url: s.url || '',
-      code: s.code || extractCode(s.name),
-      duration: s.duration || ''
-    })).filter(s => s.url.startsWith('http') && s.url.length > 12)
+    stations: (g.stations || []).map(s => {
+      const stationObj = {
+        name: s.name || 'ไม่มีชื่อ',
+        image: s.image || '',
+        url: s.url || '',
+        code: s.code || extractCode(s.name),
+        duration: s.duration || ''
+      };
+      if (s.is_new) {
+        stationObj.is_new = true;
+      }
+      return stationObj;
+    }).filter(s => s.url.startsWith('http') && s.url.length > 12)
   })).filter(g => g.stations.length > 0);
 }
 

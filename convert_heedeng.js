@@ -1,16 +1,24 @@
 const fs = require('fs');
 const path = require('path');
 
-const inputPath = path.join(__dirname, 'scrape_heedeng', 'progress.json');
+const inputPath = path.join(__dirname, 'scrape_heedeng', 'videos.json');
+const altInputPath = path.join(__dirname, 'scrape_heedeng', 'progress.json');
 const outputPath = path.join(__dirname, 'playlists', 'Heedeng.json');
 
 try {
-  if (!fs.existsSync(inputPath)) {
-    console.error(`Input file not found: ${inputPath}`);
+  let fileToRead = null;
+  if (fs.existsSync(inputPath)) {
+    fileToRead = inputPath;
+  } else if (fs.existsSync(altInputPath)) {
+    fileToRead = altInputPath;
+  }
+
+  if (!fileToRead) {
+    console.error(`Input file not found: Neither ${inputPath} nor ${altInputPath} exists.`);
     process.exit(1);
   }
 
-  const content = fs.readFileSync(inputPath, 'utf8');
+  const content = fs.readFileSync(fileToRead, 'utf8');
   const parsed = JSON.parse(content);
   const videos = Array.isArray(parsed) ? parsed : (parsed.videos || []);
 
@@ -30,7 +38,8 @@ try {
       image: video.thumbnail || '',
       url: video.embed_url || '',
       code: '',
-      duration: video.duration || ''
+      duration: video.duration || '',
+      is_new: !!video.is_new
     });
   });
 

@@ -55,7 +55,8 @@ try {
       image: video.thumbnail || '',
       url: url,
       code: '',
-      duration: duration
+      duration: duration,
+      is_new: !!video.is_new
     });
   });
 

@@ -291,6 +291,7 @@ def main():
             print(f"  [{i}] คลิปใหม่! → {link}")
             detail = scrape_video_detail(link)
             if detail:
+                detail["is_new"] = True
                 new_videos.append(detail)
                 existing_urls.add(link)  # กันซ้ำในรอบนี้
                 print(f"       ✓ {detail['title'][:60]}...")
@@ -303,6 +304,10 @@ def main():
         print("\nไม่มีคลิปใหม่")
         return
 
+    # ล้างแท็ก is_new ของคลิปเก่าทั้งหมดในฐานข้อมูล
+    for v in existing:
+        v["is_new"] = False
+
     # ใส่คลิปใหม่ไว้ด้านหน้า (คลิปใหม่ขึ้นก่อน)
     updated = new_videos + existing
 
@@ -311,19 +316,22 @@ def main():
 
     # อัปเดต progress.json ด้วยถ้ามี
     progress_file = "progress.json"
-    if os.path.exists(progress_file):
-        try:
+    try:
+        if os.path.exists(progress_file):
             with open(progress_file, "r", encoding="utf-8") as f:
                 pdata = json.load(f)
             pdata["videos"] = updated
             pdata["seen_urls"] = list(existing_urls)
             with open(progress_file, "w", encoding="utf-8") as f:
                 json.dump(pdata, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"[WARN] ไม่สามารถอัปเดต {progress_file}: {e}")
+        else:
+            with open(progress_file, "w", encoding="utf-8") as f:
+                json.dump(updated, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[WARN] ไม่สามารถอัปเดต {progress_file}: {e}")
 
     print(f"\n✅ อัปเดตเสร็จ!")
-    print(f"   คลิปใหม่ที่เพิ่ม: {len(new_videos)}")
+    print(f"   คลิปใหม่ที่เพิ่ม: {len(new_videos)} (ติดแท็ก NEW)")
     print(f"   รวมทั้งหมดตอนนี้: {len(updated)}")
     print(f"   บันทึกที่: {OUTPUT_FILE}")
 

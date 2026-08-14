@@ -2272,6 +2272,7 @@ function createVideoCard(video, idx) {
       <div class="card-play-overlay">
         <div class="card-play-btn">${getIcon('play')}</div>
       </div>
+      ${video.is_new ? `<span class="card-badge-new">NEW</span>` : ''}
       ${video.code ? `<span class="card-badge">${escHtml(video.code)}</span>` : ''}
       <span class="card-duration">${escHtml(durationText)}</span>
     </div>
@@ -2847,6 +2848,7 @@ function renderRelated(current) {
           loading="lazy"
           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22100%22><rect fill=%22%231a1a28%22 width=%22160%22 height=%22100%22/><path fill=%22%23606080%22 transform=%22translate(68, 38)%22 d=%22M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z%22/></svg>'"
         />
+        ${v.is_new ? `<span class="card-badge-new">NEW</span>` : ''}
       </div>
       <div class="related-title">${escHtml(v.name)}</div>
     `;

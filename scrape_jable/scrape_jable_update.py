@@ -141,7 +141,8 @@ def update_latest_jable(max_pages=2):
                         "image": image,
                         "url": m3u8_url,
                         "code": code,
-                        "duration": ""
+                        "duration": "",
+                        "is_new": True
                     }
 
                     progress_cache[video_page_url] = {
@@ -149,7 +150,8 @@ def update_latest_jable(max_pages=2):
                         'name': title,
                         'image': image,
                         'm3u8': m3u8_url,
-                        'resolved_at': time.time()
+                        'resolved_at': time.time(),
+                        'is_new': True
                     }
 
                     added_stations.append(station)
@@ -164,7 +166,10 @@ def update_latest_jable(max_pages=2):
         browser.close()
 
     if added_stations:
-        print(f"\n[Success] Adding {len(added_stations)} new videos to 4_JAV_Update.json")
+        print(f"\n[Success] Adding {len(added_stations)} new videos to 4_JAV_Update.json (with NEW tag)")
+        # ล้างแท็ก is_new ของคลิปเก่า
+        for s in stations:
+            s['is_new'] = False
         playlist_data['groups'][0]['stations'] = added_stations + stations
         save_json(PLAYLIST_FILE, playlist_data)
         save_json(PROGRESS_FILE, progress_cache)
